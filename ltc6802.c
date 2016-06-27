@@ -64,10 +64,10 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 	}
 
 static const struct iio_chan_spec ltc6802_channels[] = {
-	LTC6802_T_CHAN(0),
+	LTC6802_T_CHAN(0), /* Internal temperature */
 	LTC6802_T_CHAN(1),
 	LTC6802_T_CHAN(2),
-	LTC6802_V_CHAN(1),
+	LTC6802_V_CHAN(1), /* Start at 1 to match cells numbering */
 	LTC6802_V_CHAN(2),
 	LTC6802_V_CHAN(3),
 	LTC6802_V_CHAN(4),
@@ -98,7 +98,6 @@ struct ltc6802_state {
 	struct spi_device		*spi;
 	__be16				*buffer;
 	struct mutex			lock;
-	struct gpio             	gpios[2];
 	u8				reg ____cacheline_aligned;
 };
 
@@ -108,12 +107,31 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 {
 	int ret = 0;
 	struct ltc6802_state *st = iio_priv(indio_dev);
+	u8 cfg[7] = {0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00};
+	u8 buf_tx[2] = {0x80, 0x02};
+	u8 buf_rx[7];
+	struct spi_transfer t[] = {
+		{
+			.tx_buf = cfg,
+			.len = 7,
+			.cs_change = 1,
+		}, {
+			.tx_buf = buf_tx,
+			.len = 2,
+		}, {
+			.rx_buf = buf_rx,
+			.len = 7,
+		},
+	};
 
 	mutex_lock(&st->lock);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
 		//ret = ltc6802_read_single_value(indio_dev, chan, val);
+		//ret = spi_write(st->spi, buf_tx, sizeof(buf_tx));
+		//ret = spi_read(st->spi, buf_rx, sizeof(buf_rx));
+		ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
 		ret = IIO_VAL_INT;
 		*val = 33000;
 		break;
