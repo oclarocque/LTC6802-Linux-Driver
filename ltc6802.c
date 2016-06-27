@@ -192,40 +192,31 @@ static DEVICE_ATTR(cell11_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io
 static DEVICE_ATTR(cell12_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
 
 static DEVICE_ATTR(gpio1_value, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(gpio1_direction, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
 static DEVICE_ATTR(gpio2_value, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+
+static DEVICE_ATTR(gpio1_direction, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
 static DEVICE_ATTR(gpio2_direction, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
 
 static struct attribute *dev_attrs[] = {
- &dev_attr_cell1_bypass.attr,
- &dev_attr_cell2_bypass.attr,
- &dev_attr_cell3_bypass.attr,
- &dev_attr_cell4_bypass.attr,
- &dev_attr_cell5_bypass.attr,
- &dev_attr_cell6_bypass.attr,
- &dev_attr_cell7_bypass.attr,
- &dev_attr_cell8_bypass.attr,
- &dev_attr_cell9_bypass.attr,
- &dev_attr_cell10_bypass.attr,
- &dev_attr_cell11_bypass.attr,
- &dev_attr_cell12_bypass.attr,
- &dev_attr_gpio1_value.attr,
- &dev_attr_gpio1_direction.attr,
- &dev_attr_gpio2_value.attr,
- &dev_attr_gpio2_direction.attr,
- NULL,
-};
-
-static struct attribute_group dev_attr_group = {
-	.attrs = dev_attrs,
-};
-
-static const struct attribute_group *dev_attr_groups[] = {
-	&dev_attr_group,
+	&dev_attr_cell1_bypass.attr,
+	&dev_attr_cell2_bypass.attr,
+	&dev_attr_cell3_bypass.attr,
+	&dev_attr_cell4_bypass.attr,
+	&dev_attr_cell5_bypass.attr,
+	&dev_attr_cell6_bypass.attr,
+	&dev_attr_cell7_bypass.attr,
+	&dev_attr_cell8_bypass.attr,
+	&dev_attr_cell9_bypass.attr,
+	&dev_attr_cell10_bypass.attr,
+	&dev_attr_cell11_bypass.attr,
+	&dev_attr_cell12_bypass.attr,
+	&dev_attr_gpio1_value.attr,
+	&dev_attr_gpio2_value.attr,
+	&dev_attr_gpio1_direction.attr,
+	&dev_attr_gpio2_direction.attr,
 	NULL,
 };
-
-//ATTRIBUTE_GROUPS(cell_discharge);
+ATTRIBUTE_GROUPS(dev);
 
 static int ltc6802_probe(struct spi_device *spi)
 {
@@ -256,7 +247,7 @@ static int ltc6802_probe(struct spi_device *spi)
 	indio_dev->channels = st->info->channels;
 	indio_dev->num_channels = st->info->num_channels;
 	/* indio_dev->groups[0] is already used by &indio_dev->chan_attr_group */
-	indio_dev->groups[1] = dev_attr_groups[0];
+	indio_dev->groups[1] = dev_groups[0];
 
 	st->buffer = devm_kmalloc(&indio_dev->dev,
 				  indio_dev->num_channels * 2,
