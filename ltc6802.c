@@ -33,20 +33,20 @@
   #define LTC6802_CMD_STCVAD_TEST1	0x1E
   #define LTC6802_CMD_STCVAD_TEST2	0x1F
 #define LTC6802_CMD_STOWAD		0x10
-  #define LTC6802_CMD_STCVAD_CELL1	0x21
-  #define LTC6802_CMD_STCVAD_CELL2	0x22
-  #define LTC6802_CMD_STCVAD_CELL3	0x23
-  #define LTC6802_CMD_STCVAD_CELL4	0x24
-  #define LTC6802_CMD_STCVAD_CELL5	0x25
-  #define LTC6802_CMD_STCVAD_CELL6	0x26
-  #define LTC6802_CMD_STCVAD_CELL7	0x27
-  #define LTC6802_CMD_STCVAD_CELL8	0x28
-  #define LTC6802_CMD_STCVAD_CELL9	0x29
-  #define LTC6802_CMD_STCVAD_CELL10	0x2A
-  #define LTC6802_CMD_STCVAD_CELL11	0x2B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVAD_CELL12	0x2C /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVAD_TEST1	0x2E
-  #define LTC6802_CMD_STCVAD_TEST2	0x2F
+  #define LTC6802_CMD_STOWAD_CELL1	0x21
+  #define LTC6802_CMD_STOWAD_CELL2	0x22
+  #define LTC6802_CMD_STOWAD_CELL3	0x23
+  #define LTC6802_CMD_STOWAD_CELL4	0x24
+  #define LTC6802_CMD_STOWAD_CELL5	0x25
+  #define LTC6802_CMD_STOWAD_CELL6	0x26
+  #define LTC6802_CMD_STOWAD_CELL7	0x27
+  #define LTC6802_CMD_STOWAD_CELL8	0x28
+  #define LTC6802_CMD_STOWAD_CELL9	0x29
+  #define LTC6802_CMD_STOWAD_CELL10	0x2A
+  #define LTC6802_CMD_STOWAD_CELL11	0x2B /* if CELL10 bit = 0 */
+  #define LTC6802_CMD_STOWAD_CELL12	0x2C /* if CELL10 bit = 0 */
+  #define LTC6802_CMD_STOWAD_TEST1	0x2E
+  #define LTC6802_CMD_STOWAD_TEST2	0x2F
 #define LTC6802_CMD_STTMPAD		0x30
   #define LTC6802_CMD_STTMPAD_ETEMP1	0x31
   #define LTC6802_CMD_STTMPAD_ETEMP2	0x32
@@ -116,13 +116,17 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 		.channel = index,					\
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),		\
 		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SCALE),	\
-		.scan_index = index + 1,				\
-		.scan_type = {						\
-			.sign = 'u',					\
-			.realbits = 12,					\
-			.storagebits = 16,				\
-			.endianness = IIO_BE,				\
-		},							\
+	}
+	
+#define LTC6802_DV_CHAN(index)						\
+	{								\
+		.type = IIO_VOLTAGE,					\
+		.indexed = 1,						\
+		.channel = index,					\
+		.channel2 = index - 1,					\
+		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),		\
+		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SCALE),	\
+		.differential = 1,					\
 	}
 
 #define LTC6802_T_CHAN(index)						\
@@ -132,13 +136,6 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 		.channel = index,					\
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),		\
 		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SCALE),	\
-		.scan_index = index + 1,				\
-		.scan_type = {						\
-			.sign = 'u',					\
-			.realbits = 12,					\
-			.storagebits = 16,				\
-			.endianness = IIO_BE,				\
-		},							\
 	}
 
 static const struct iio_chan_spec ltc6802_channels[] = {
@@ -146,22 +143,23 @@ static const struct iio_chan_spec ltc6802_channels[] = {
 	LTC6802_T_CHAN(1),
 	LTC6802_T_CHAN(2),
 	LTC6802_V_CHAN(1), /* Start at 1 to match cells numbering */
-	LTC6802_V_CHAN(2),
-	LTC6802_V_CHAN(3),
-	LTC6802_V_CHAN(4),
-	LTC6802_V_CHAN(5),
-	LTC6802_V_CHAN(6),
-	LTC6802_V_CHAN(7),
-	LTC6802_V_CHAN(8),
-	LTC6802_V_CHAN(9),
-	LTC6802_V_CHAN(10),
-	LTC6802_V_CHAN(11),
-	LTC6802_V_CHAN(12),
+	LTC6802_DV_CHAN(2),
+	LTC6802_DV_CHAN(3),
+	LTC6802_DV_CHAN(4),
+	LTC6802_DV_CHAN(5),
+	LTC6802_DV_CHAN(6),
+	LTC6802_DV_CHAN(7),
+	LTC6802_DV_CHAN(8),
+	LTC6802_DV_CHAN(9),
+	LTC6802_DV_CHAN(10),
+	LTC6802_DV_CHAN(11),
+	LTC6802_DV_CHAN(12),
 };
 
 struct ltc6802_chip_info {
 	const struct iio_chan_spec *channels;
 	unsigned int num_channels;
+	unsigned int address;
 };
 
 static const struct ltc6802_chip_info ltc6802_chip_info_tbl[] = {
