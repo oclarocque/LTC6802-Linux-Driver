@@ -183,20 +183,27 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 {
 	int ret = 0;
 	struct ltc6802_state *st = iio_priv(indio_dev);
-	u8 cfg[7] = {0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00};
-	u8 buf_tx[2] = {0x80, 0x02};
-	u8 buf_rx[7];
+	u8 cfg[7] = {LTC6802_CMD_WRCFG, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00};
+	u8 buf_tx1[1] = {0x1F};
+	u8 buf_tx2[2] = {0x80, LTC6802_CMD_RDCV};
+	u8 buf_rx[19];
 	struct spi_transfer t[] = {
 		{
 			.tx_buf = cfg,
 			.len = 7,
 			.cs_change = 1,
 		}, {
-			.tx_buf = buf_tx,
+			.tx_buf = buf_tx1,
+			.len = 1,
+		},
+	};
+	struct spi_transfer t2[] = {
+		{
+			.tx_buf = buf_tx2,
 			.len = 2,
 		}, {
 			.rx_buf = buf_rx,
-			.len = 7,
+			.len = 19,
 		},
 	};
 
@@ -208,6 +215,8 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 		//ret = spi_write(st->spi, buf_tx, sizeof(buf_tx));
 		//ret = spi_read(st->spi, buf_rx, sizeof(buf_rx));
 		ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
+		mdelay(30);
+		ret = spi_sync_transfer(st->spi, t2, ARRAY_SIZE(t2));
 		ret = IIO_VAL_INT;
 		*val = 33000;
 		break;
