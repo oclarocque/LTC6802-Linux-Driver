@@ -67,7 +67,6 @@ static const struct iio_chan_spec ltc6802_channels[] = {
 	LTC6802_T_CHAN(0),
 	LTC6802_T_CHAN(1),
 	LTC6802_T_CHAN(2),
-	LTC6802_V_CHAN(0),
 	LTC6802_V_CHAN(1),
 	LTC6802_V_CHAN(2),
 	LTC6802_V_CHAN(3),
@@ -146,46 +145,56 @@ static const struct iio_info ltc6802_info = {
 	.read_raw = &ltc6802_read_raw,
 };
 
-static ssize_t cell_discharge_show(struct device *dev,
-                                   struct device_attribute *attr, char *buf)
+static ssize_t digital_io_show(struct device *dev,
+                               struct device_attribute *attr, char *buf)
 {
 	pr_info("%s\n", attr->attr.name);
 	return sprintf(buf, "%d\n", test);
 }
-static ssize_t cell_discharge_store(struct device *dev,
-                                    struct device_attribute *attr, const char *buf,
-                                    size_t count)
+static ssize_t digital_io_store(struct device *dev,
+                                struct device_attribute *attr, const char *buf,
+                                size_t count)
 {
 	pr_info("%s\n", attr->attr.name);
 	sscanf(buf, "%d\n", &test);
 	return count;
 }
-static DEVICE_ATTR(cell0_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell1_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell2_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell3_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell4_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell5_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell6_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell7_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell8_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell9_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell10_discharge, S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
-static DEVICE_ATTR(cell11_discharge, S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+
+static DEVICE_ATTR(cell1_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell2_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell3_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell4_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell5_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell6_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell7_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell8_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell9_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell10_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell11_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell12_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+
+static DEVICE_ATTR(gpio1_value, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio1_direction, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio2_value, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio2_direction, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
 
 static struct attribute *dev_attrs[] = {
- &dev_attr_cell0_discharge.attr,
- &dev_attr_cell1_discharge.attr,
- &dev_attr_cell2_discharge.attr,
- &dev_attr_cell3_discharge.attr,
- &dev_attr_cell4_discharge.attr,
- &dev_attr_cell5_discharge.attr,
- &dev_attr_cell6_discharge.attr,
- &dev_attr_cell7_discharge.attr,
- &dev_attr_cell8_discharge.attr,
- &dev_attr_cell9_discharge.attr,
- &dev_attr_cell10_discharge.attr,
- &dev_attr_cell11_discharge.attr,
+ &dev_attr_cell1_bypass.attr,
+ &dev_attr_cell2_bypass.attr,
+ &dev_attr_cell3_bypass.attr,
+ &dev_attr_cell4_bypass.attr,
+ &dev_attr_cell5_bypass.attr,
+ &dev_attr_cell6_bypass.attr,
+ &dev_attr_cell7_bypass.attr,
+ &dev_attr_cell8_bypass.attr,
+ &dev_attr_cell9_bypass.attr,
+ &dev_attr_cell10_bypass.attr,
+ &dev_attr_cell11_bypass.attr,
+ &dev_attr_cell12_bypass.attr,
+ &dev_attr_gpio1_value.attr,
+ &dev_attr_gpio1_direction.attr,
+ &dev_attr_gpio2_value.attr,
+ &dev_attr_gpio2_direction.attr,
  NULL,
 };
 
