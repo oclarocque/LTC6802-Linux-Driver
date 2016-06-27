@@ -2,12 +2,16 @@
 #include <linux/kernel.h>
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
+#include <linux/gpio.h>
+#include <linux/device.h>
 
 #include <linux/iio/iio.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/trigger.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/iio/triggered_buffer.h>
+
+static ssize_t test = 0;
 
 enum ltc6802_id {
 	ltc6802
@@ -95,6 +99,7 @@ struct ltc6802_state {
 	struct spi_device		*spi;
 	__be16				*buffer;
 	struct mutex			lock;
+	struct gpio             	gpios[2];
 	u8				reg ____cacheline_aligned;
 };
 
@@ -141,6 +146,33 @@ static const struct iio_info ltc6802_info = {
 	.read_raw = &ltc6802_read_raw,
 };
 
+static ssize_t cell_discharge_show(struct device *dev,
+                                   struct device_attribute *attr, char *buf)
+{
+	pr_info("%s\n", attr->attr.name);
+	return sprintf(buf, "%d", test);
+}
+static ssize_t cell_discharge_store(struct device *dev,
+                                    struct device_attribute *attr, const char *buf,
+                                    size_t count)
+{
+	pr_info("%s\n", attr->attr.name);
+	sscanf(buf, "%d", &test);
+	return count;
+}
+static DEVICE_ATTR(cell0_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell1_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell2_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell3_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell4_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell5_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell6_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell7_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell8_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell9_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell10_discharge, S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+static DEVICE_ATTR(cell11_discharge, S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+
 static int ltc6802_probe(struct spi_device *spi)
 {
 	int ret;
@@ -181,7 +213,21 @@ static int ltc6802_probe(struct spi_device *spi)
 	ret = iio_device_register(indio_dev);
 	if (ret < 0) {
 		dev_err(&indio_dev->dev, "Failed to register iio device\n");
+		return ret;
 	}
+	
+	device_create_file(&indio_dev->dev, &dev_attr_cell0_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell1_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell2_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell3_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell4_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell5_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell6_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell7_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell8_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell9_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell10_discharge);
+	device_create_file(&indio_dev->dev, &dev_attr_cell11_discharge);
 
 	return ret;
 }
