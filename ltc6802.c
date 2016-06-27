@@ -150,14 +150,14 @@ static ssize_t cell_discharge_show(struct device *dev,
                                    struct device_attribute *attr, char *buf)
 {
 	pr_info("%s\n", attr->attr.name);
-	return sprintf(buf, "%d", test);
+	return sprintf(buf, "%d\n", test);
 }
 static ssize_t cell_discharge_store(struct device *dev,
                                     struct device_attribute *attr, const char *buf,
                                     size_t count)
 {
 	pr_info("%s\n", attr->attr.name);
-	sscanf(buf, "%d", &test);
+	sscanf(buf, "%d\n", &test);
 	return count;
 }
 static DEVICE_ATTR(cell0_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
@@ -172,6 +172,33 @@ static DEVICE_ATTR(cell8_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cel
 static DEVICE_ATTR(cell9_discharge,  S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
 static DEVICE_ATTR(cell10_discharge, S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
 static DEVICE_ATTR(cell11_discharge, S_IWUSR | S_IRUGO, cell_discharge_show, cell_discharge_store);
+
+static struct attribute *dev_attrs[] = {
+ &dev_attr_cell0_discharge.attr,
+ &dev_attr_cell1_discharge.attr,
+ &dev_attr_cell2_discharge.attr,
+ &dev_attr_cell3_discharge.attr,
+ &dev_attr_cell4_discharge.attr,
+ &dev_attr_cell5_discharge.attr,
+ &dev_attr_cell6_discharge.attr,
+ &dev_attr_cell7_discharge.attr,
+ &dev_attr_cell8_discharge.attr,
+ &dev_attr_cell9_discharge.attr,
+ &dev_attr_cell10_discharge.attr,
+ &dev_attr_cell11_discharge.attr,
+ NULL,
+};
+
+static struct attribute_group dev_attr_group = {
+	.attrs = dev_attrs,
+};
+
+static const struct attribute_group *dev_attr_groups[] = {
+	&dev_attr_group,
+	NULL,
+};
+
+//ATTRIBUTE_GROUPS(cell_discharge);
 
 static int ltc6802_probe(struct spi_device *spi)
 {
@@ -201,6 +228,8 @@ static int ltc6802_probe(struct spi_device *spi)
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = st->info->channels;
 	indio_dev->num_channels = st->info->num_channels;
+	/* indio_dev->groups[0] is already used by &indio_dev->chan_attr_group */
+	indio_dev->groups[1] = dev_attr_groups[0];
 
 	st->buffer = devm_kmalloc(&indio_dev->dev,
 				  indio_dev->num_channels * 2,
@@ -215,19 +244,6 @@ static int ltc6802_probe(struct spi_device *spi)
 		dev_err(&indio_dev->dev, "Failed to register iio device\n");
 		return ret;
 	}
-	
-	device_create_file(&indio_dev->dev, &dev_attr_cell0_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell1_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell2_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell3_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell4_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell5_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell6_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell7_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell8_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell9_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell10_discharge);
-	device_create_file(&indio_dev->dev, &dev_attr_cell11_discharge);
 
 	return ret;
 }
