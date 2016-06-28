@@ -29,7 +29,7 @@
   #define LTC6802_CMD_STCVAD_CELL9	0x19
   #define LTC6802_CMD_STCVAD_CELL10	0x1A
   #define LTC6802_CMD_STCVAD_CELL11	0x1B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVAD_CELL12	0x1C /* if CELL10 bit = 0 */	
+  #define LTC6802_CMD_STCVAD_CELL12	0x1C /* if CELL10 bit = 0 */
   #define LTC6802_CMD_STCVAD_TEST1	0x1E
   #define LTC6802_CMD_STCVAD_TEST2	0x1F
 #define LTC6802_CMD_STOWAD		0x10
@@ -53,7 +53,7 @@
   #define LTC6802_CMD_STTMPAD_ITEMP	0x33
   #define LTC6802_CMD_STTMPAD_TEST1	0x3E
   #define LTC6802_CMD_STTMPAD_TEST2	0x3F
-#define LTC6802_CMD_PLADC		0x40 
+#define LTC6802_CMD_PLADC		0x40
 #define LTC6802_CMD_PLINT		0x50
 #define LTC6802_CMD_STCVDC		0x60
   #define LTC6802_CMD_STCVDC_CELL1	0x61
@@ -67,7 +67,7 @@
   #define LTC6802_CMD_STCVDC_CELL9	0x69
   #define LTC6802_CMD_STCVDC_CELL10	0x6A
   #define LTC6802_CMD_STCVDC_CELL11	0x6B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVDC_CELL12	0x6C /* if CELL10 bit = 0 */	
+  #define LTC6802_CMD_STCVDC_CELL12	0x6C /* if CELL10 bit = 0 */
   #define LTC6802_CMD_STCVDC_TEST1	0x6E
   #define LTC6802_CMD_STCVDC_TEST2	0x6F
 #define LTC6802_CMD_STOWDC		0x70
@@ -82,10 +82,10 @@
   #define LTC6802_CMD_STOWDC_CELL9	0x79
   #define LTC6802_CMD_STOWDC_CELL10	0x7A
   #define LTC6802_CMD_STOWDC_CELL11	0x7B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STOWDC_CELL12	0x7C /* if CELL10 bit = 0 */	
+  #define LTC6802_CMD_STOWDC_CELL12	0x7C /* if CELL10 bit = 0 */
   #define LTC6802_CMD_STOWDC_TEST1	0x7E
   #define LTC6802_CMD_STOWDC_TEST2	0x7F
-  
+
 /* LTC6802 Configuration Register Group 0 */
 #define LTC6802_CFGR0_WDT		BIT(7)
 #define LTC6802_CFGR0_GPIO2		BIT(6)
@@ -162,7 +162,7 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),		\
 		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SCALE),	\
 	}
-	
+
 #define LTC6802_DV_CHAN(index)						\
 	{								\
 		.type = IIO_VOLTAGE,					\
@@ -226,7 +226,7 @@ static int ltc6802_get_cell_voltage_from_rx_buffer(int chan, u8 *buf)
 {
 	int voltage;
 	int index;
-	
+
 	if (chan % 2) {
 		index = (chan - 1) + ((chan - 1) / 2);
 		voltage = ((buf[index + 1] & 0x0F) << 8) | buf[index];
@@ -281,7 +281,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 		dev_err(&indio_dev->dev,
 			"Failed to request A/D conversion start\n");
 	}
-	
+
 	mdelay(30);
 
 	// st->cfg_reg[0] = 0x80;
@@ -296,7 +296,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 			"Failed to read conversion registers\n");
 		return ret;
 	}
-	
+
 	*val = ltc6802_get_cell_voltage_from_rx_buffer(chan->channel, t2[1].rx_buf);
 
 	return IIO_VAL_INT;
