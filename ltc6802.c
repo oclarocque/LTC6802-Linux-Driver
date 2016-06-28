@@ -131,8 +131,8 @@
 #define LTC6802_CFGR3_MC6I		BIT(1)
 #define LTC6802_CFGR3_MC5I		BIT(0)
 
-#define LTC6802_VREF_MV                 3065
-#define LTC6802_ADC_RESOLUTION_BIT      12
+#define LTC6802_INPUT_DELTA_MV		6144
+#define LTC6802_ADC_RESOLUTION_BIT	12
 
 static ssize_t test = 0;
 
@@ -319,7 +319,7 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 		switch (chan->type) {
 		case IIO_TEMP:
 		case IIO_VOLTAGE:
-			*val = LTC6802_VREF_MV * 2;
+			*val = LTC6802_INPUT_DELTA_MV;
 			*val2 = LTC6802_ADC_RESOLUTION_BIT;
 			ret = IIO_VAL_FRACTIONAL_LOG2;
 			break;
