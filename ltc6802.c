@@ -184,10 +184,10 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 	}
 
 static const struct iio_chan_spec ltc6802_channels[] = {
-	LTC6802_T_CHAN(0), /* Internal temperature */
+	LTC6802_T_CHAN(0),
 	LTC6802_T_CHAN(1),
 	LTC6802_T_CHAN(2),
-	LTC6802_V_CHAN(1), /* Start at 1 to match cells numbering */
+	LTC6802_V_CHAN(1),
 	LTC6802_DV_CHAN(2),
 	LTC6802_DV_CHAN(3),
 	LTC6802_DV_CHAN(4),
@@ -219,8 +219,88 @@ struct ltc6802_state {
 	struct spi_device		*spi;
 	__be16				*buffer;
 	struct mutex			lock;
-	u8				reg ____cacheline_aligned;
+	u8				cfg_reg[6] ____cacheline_aligned;
 };
+
+static int ltc6802_get_cell_voltage_from_rx_buffer(int chan, u8 *buf)
+{
+	int voltage;
+	int index;
+	
+	if (chan % 2) {
+		index = (chan - 1) + ((chan - 1) / 2);
+		voltage = ((buf[index + 1] & 0x0F) << 8) | buf[index];
+
+	} else {
+		index = chan + (chan / 2) - 1;
+		voltage = (buf[index] << 4) | ((buf[index - 1] & 0xF0) >> 4);
+	}
+
+	pr_info("channel %d : %d mV\n", chan, voltage);
+	return voltage;
+}
+
+static int ltc6802_read_single_value(struct iio_dev *indio_dev,
+				     struct iio_chan_spec const *chan,
+				     int *val)
+{
+	int ret;
+	//struct spi_transfer t[2];
+	struct ltc6802_state *st = iio_priv(indio_dev);
+	u8 buf_tx2[2] = {0x80, LTC6802_CMD_RDCV};
+	u8 buf_rx[19];
+
+	struct spi_transfer t2[] = {
+		{
+		       .tx_buf = buf_tx2,
+		       .len = 2,
+		}, {
+		       .rx_buf = buf_rx,
+		       .len = 19,
+		},
+	};
+
+	/* Get LTC6802 out of default standby mode */
+	st->cfg_reg[0] = LTC6802_CFGR0_CDC_MODE1;
+	st->cfg_reg[1] = LTC6802_CMD_WRCFG;
+	st->cfg_reg[2] = 0x00;
+	st->cfg_reg[3] = 0x00;
+	st->cfg_reg[4] = 0x00;
+	st->cfg_reg[5] = 0x00;
+	st->cfg_reg[6] = 0x00;
+	ret = spi_write(st->spi, &st->cfg_reg, 7);
+	if (ret < 0) {
+		dev_err(&indio_dev->dev,
+			"Failed to configure config registers\n");
+		return ret;
+	}
+
+	st->cfg_reg[0] = LTC6802_CMD_STCVAD_TEST2;
+	ret = spi_write(st->spi, &st->cfg_reg, 1);
+	if (ret < 0) {
+		dev_err(&indio_dev->dev,
+			"Failed to request A/D conversion start\n");
+	}
+	
+	mdelay(30);
+
+	// st->cfg_reg[0] = 0x80;
+	// st->cfg_reg[1] = LTC6802_CMD_RDCV;
+	// t[0].tx_buf = st->cfg_reg;
+	// t[0].len = 2;
+	// t[1].rx_buf = &cv;
+	// t[1].len = 19;
+	ret = spi_sync_transfer(st->spi, t2, ARRAY_SIZE(t2));
+	if (ret < 0) {
+		dev_err(&indio_dev->dev,
+			"Failed to read conversion registers\n");
+		return ret;
+	}
+	
+	*val = ltc6802_get_cell_voltage_from_rx_buffer(chan->channel, t2[1].rx_buf);
+
+	return IIO_VAL_INT;
+}
 
 static int ltc6802_read_raw(struct iio_dev *indio_dev,
 			    struct iio_chan_spec const *chan,
@@ -228,42 +308,12 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 {
 	int ret = 0;
 	struct ltc6802_state *st = iio_priv(indio_dev);
-	u8 cfg[7] = {LTC6802_CMD_WRCFG, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00};
-	u8 buf_tx1[1] = {0x1F};
-	u8 buf_tx2[2] = {0x80, LTC6802_CMD_RDCV};
-	u8 buf_rx[19];
-	struct spi_transfer t[] = {
-		{
-			.tx_buf = cfg,
-			.len = 7,
-			.cs_change = 1,
-		}, {
-			.tx_buf = buf_tx1,
-			.len = 1,
-		},
-	};
-	struct spi_transfer t2[] = {
-		{
-			.tx_buf = buf_tx2,
-			.len = 2,
-		}, {
-			.rx_buf = buf_rx,
-			.len = 19,
-		},
-	};
 
 	mutex_lock(&st->lock);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		//ret = ltc6802_read_single_value(indio_dev, chan, val);
-		//ret = spi_write(st->spi, buf_tx, sizeof(buf_tx));
-		//ret = spi_read(st->spi, buf_rx, sizeof(buf_rx));
-		ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
-		mdelay(30);
-		ret = spi_sync_transfer(st->spi, t2, ARRAY_SIZE(t2));
-		ret = IIO_VAL_INT;
-		*val = 33000;
+		ret = ltc6802_read_single_value(indio_dev, chan, val);
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		switch (chan->type) {
