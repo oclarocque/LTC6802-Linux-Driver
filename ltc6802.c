@@ -194,8 +194,9 @@ static const struct iio_chan_spec ltc6802_channels[] = {
 	LTC6802_T_CHAN(0),  /* Int. temp   */
 	LTC6802_T_CHAN(1),  /* Ext. temp 1 */
 	LTC6802_T_CHAN(2),  /* Ext. temp 2 */
-	LTC6802_V_CHAN(1),  /* Voltage channels start at 1 to match.. */
-	LTC6802_DV_CHAN(2), /* ..cells numbering in datasheet         */
+	LTC6802_V_CHAN(0),
+	LTC6802_DV_CHAN(1),
+	LTC6802_DV_CHAN(2),
 	LTC6802_DV_CHAN(3),
 	LTC6802_DV_CHAN(4),
 	LTC6802_DV_CHAN(5),
@@ -205,7 +206,6 @@ static const struct iio_chan_spec ltc6802_channels[] = {
 	LTC6802_DV_CHAN(9),
 	LTC6802_DV_CHAN(10),
 	LTC6802_DV_CHAN(11),
-	LTC6802_DV_CHAN(12),
 };
 
 struct ltc6802_chip_info {
@@ -229,8 +229,8 @@ struct ltc6802_state {
 	u8				cfg_reg[6] ____cacheline_aligned;
 };
 
-static int ltc6802_read_register_group(struct iio_dev *indio_dev, 
-				       int reg, u8 *rx_buf, int rx_buf_size)
+static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
+				  int reg, u8 *rx_buf, int rx_buf_size)
 {
 	int ret;
 	u8 tx_buf[2];
@@ -262,7 +262,7 @@ static int ltc6802_read_register_group(struct iio_dev *indio_dev,
 	default:
 		return -EINVAL;
 	}
-	
+
 	ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
 	if (ret < 0) {
 		dev_err(&indio_dev->dev,
@@ -270,23 +270,23 @@ static int ltc6802_read_register_group(struct iio_dev *indio_dev,
 	}
 	return ret;
 }
-
-static int ltc6802_get_voltage_from_cv_reg_group(int chan, u8 *buf)
+static int ltc6802_get_chan_value_from_reg_group(int chan, u8 *buf)
 {
-	int voltage;
+	int value;
 	int index;
 
+	chan++;
 	if (chan % 2) {
 		index = (chan - 1) + ((chan - 1) / 2);
-		voltage = ((buf[index + 1] & 0x0F) << 8) | buf[index];
+		value = ((buf[index + 1] & 0x0F) << 8) | buf[index];
 
 	} else {
 		index = chan + (chan / 2) - 1;
-		voltage = (buf[index] << 4) | ((buf[index - 1] & 0xF0) >> 4);
+		value = (buf[index] << 4) | ((buf[index - 1] & 0xF0) >> 4);
 	}
 
-	pr_info("channel %d : %d mV\n", chan, voltage);
-	return voltage;
+	return value;
+
 }
 
 static int ltc6802_read_single_value(struct iio_dev *indio_dev,
@@ -294,6 +294,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 				     int *val)
 {
 	int ret;
+	int reg;
 	u8 rx_buf[19];
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
@@ -312,18 +313,29 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 		return ret;
 	}
 
-	st->cfg_reg[0] = LTC6802_CMD_STCVAD_TEST2;
+	switch (chan->type) {
+	case IIO_TEMP:
+		st->cfg_reg[0] = LTC6802_CMD_STTMPAD_TEST2;
+		reg = LTC6802_TMP;
+		break;
+	case IIO_VOLTAGE:
+		st->cfg_reg[0] = LTC6802_CMD_STCVAD_TEST2;
+		reg = LTC6802_CV;
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	ret = spi_write(st->spi, &st->cfg_reg, 1);
 	if (ret < 0) {
 		dev_err(&indio_dev->dev,
 			"Failed to request A/D conversion start\n");
 	}
 
-	mdelay(30);
+	mdelay(30); /* Wait for the conversion to be complete */
 	
-	ret = ltc6802_read_register_group(indio_dev, LTC6802_CV, rx_buf, ARRAY_SIZE(rx_buf));
-
-	*val = ltc6802_get_voltage_from_cv_reg_group(chan->channel, rx_buf);
+	ret = ltc6802_read_reg_group(indio_dev, reg, rx_buf, ARRAY_SIZE(rx_buf));
+	*val = ltc6802_get_chan_value_from_reg_group(chan->channel, rx_buf);
 
 	return IIO_VAL_INT;
 }
