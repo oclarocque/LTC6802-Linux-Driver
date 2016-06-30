@@ -155,7 +155,7 @@ MODULE_DEVICE_TABLE(spi, ltc6802_id);
 
 #ifdef CONFIG_OF
 static const struct of_device_id ltc6802_adc_dt_ids[] = {
-	{ .compatible = "linear,ltc6802" },
+	{ .compatible = "ltc,ltc6802" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
@@ -211,7 +211,6 @@ static const struct iio_chan_spec ltc6802_channels[] = {
 struct ltc6802_chip_info {
 	const struct iio_chan_spec *channels;
 	unsigned int num_channels;
-	unsigned int address;
 };
 
 static const struct ltc6802_chip_info ltc6802_chip_info_tbl[] = {
@@ -226,6 +225,7 @@ struct ltc6802_state {
 	struct spi_device		*spi;
 	__be16				*buffer;
 	struct mutex			lock;
+	unsigned int			address;
 	u8				cfg_reg[6] ____cacheline_aligned;
 };
 
@@ -245,7 +245,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 		},
 	};
 
-	tx_buf[0] = 0x80;
+	tx_buf[0] = 0x80 | st->address;;
 	switch(reg) {
 	case LTC6802_CFG:
 		tx_buf[1] = LTC6802_CMD_RDCFG;
@@ -268,8 +268,10 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 		dev_err(&indio_dev->dev,
 			"Failed to read register group\n");
 	}
+
 	return ret;
 }
+
 static int ltc6802_get_chan_value_from_reg_group(int chan, u8 *buf)
 {
 	int value;
@@ -286,7 +288,6 @@ static int ltc6802_get_chan_value_from_reg_group(int chan, u8 *buf)
 	}
 
 	return value;
-
 }
 
 static int ltc6802_read_single_value(struct iio_dev *indio_dev,
@@ -439,6 +440,7 @@ ATTRIBUTE_GROUPS(dev);
 static int ltc6802_probe(struct spi_device *spi)
 {
 	int ret;
+	const void *ltc6802_addr;
 	struct iio_dev *indio_dev;
 	struct ltc6802_state *st;
 
@@ -455,6 +457,14 @@ static int ltc6802_probe(struct spi_device *spi)
 	st = iio_priv(indio_dev);
 	st->spi = spi;
 	st->info = &ltc6802_chip_info_tbl[spi_get_device_id(spi)->driver_data];
+
+	ltc6802_addr = of_get_property(st->spi->dev.of_node, "ltc6802,addr", NULL);
+	if (!ltc6802_addr) {
+		pr_err("Addr field not present in device tree\n");
+		return -EINVAL;
+	}
+	st->address = be32_to_cpup(ltc6802_addr);
+	pr_info("Addr: %d\n", st->address);
 
 	mutex_init(&st->lock);
 
