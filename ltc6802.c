@@ -133,6 +133,10 @@
 
 #define LTC6802_INPUT_DELTA_MV		6144
 #define LTC6802_ADC_RESOLUTION_BIT	12
+#define LTC6802_ADDR_CMD_SOF		1000
+#define LTC6802_ADDR_BYTE_POS		0
+#define LTC6802_CMD_BYTE_POS		1
+#define LTC6802_RX_BUF_SIZE		19
 
 enum ltc6802_register_group {
 	LTC6802_CFG,
@@ -229,13 +233,42 @@ struct ltc6802_state {
 	u8				cfg_reg[6] ____cacheline_aligned;
 };
 
+static u8 ltc6802_crc8(u8 crc_in, u8 data)
+{
+	u8 crc_out = crc_in ^ data;
+	int i;
+
+	for (i = 0; i < 8; i++) {
+		if (crc_out & 0x80) {
+			crc_out <<= 1;
+			crc_out ^= 0x07;
+		} else {
+			crc_out <<= 1;
+		}
+	}
+
+	return crc_out;
+}
+
+static u8 ltc6802_pec_calculation(u8 *buf, int size)
+{
+	u8 pec = 0;
+	int i;
+
+	for (i = 0; i < (size - 1); i++)
+		pec = ltc6802_crc8(pec, buf[i]);
+
+	return pec;
+}
+
 static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 				  int reg, u8 *rx_buf, int rx_buf_size)
 {
 	int ret;
+	u8 pec;
 	u8 tx_buf[2];
 	struct ltc6802_state *st = iio_priv(indio_dev);
-	struct spi_transfer t[2] = {
+	struct spi_transfer t[] = {
 		{
 		       .tx_buf = tx_buf,
 		       .len = ARRAY_SIZE(tx_buf),
@@ -245,19 +278,19 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 		},
 	};
 
-	tx_buf[0] = 0x80 | st->address;;
+	tx_buf[LTC6802_ADDR_BYTE_POS] = (LTC6802_ADDR_CMD_SOF << 4) | st->address;;
 	switch(reg) {
 	case LTC6802_CFG:
-		tx_buf[1] = LTC6802_CMD_RDCFG;
+		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDCFG;
 		break;
 	case LTC6802_CV:
-		tx_buf[1] = LTC6802_CMD_RDCV;
+		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDCV;
 		break;
 	case LTC6802_FLG:
-		tx_buf[1] = LTC6802_CMD_RDFLG;
+		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDFLG;
 		break;
 	case LTC6802_TMP:
-		tx_buf[1] = LTC6802_CMD_RDTMP;
+		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDTMP;
 		break;
 	default:
 		return -EINVAL;
@@ -267,6 +300,12 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 	if (ret < 0) {
 		dev_err(&indio_dev->dev,
 			"Failed to read register group\n");
+	}
+
+	pec = ltc6802_pec_calculation(rx_buf, rx_buf_size);
+	if (pec != rx_buf[rx_buf_size - 1]) {
+		dev_warn(&indio_dev->dev,
+			"PEC error on register group\n");
 	}
 
 	return ret;
@@ -296,7 +335,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 {
 	int ret;
 	int reg;
-	u8 rx_buf[19];
+	u8 rx_buf[LTC6802_RX_BUF_SIZE];
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
 	/* Get LTC6802 out of default standby mode */
@@ -460,7 +499,7 @@ static int ltc6802_probe(struct spi_device *spi)
 
 	ltc6802_addr = of_get_property(st->spi->dev.of_node, "ltc6802,addr", NULL);
 	if (!ltc6802_addr) {
-		pr_err("Addr field not present in device tree\n");
+		pr_err("ltc6802,addr field not present in device node\n");
 		return -EINVAL;
 	}
 	st->address = be32_to_cpup(ltc6802_addr);
