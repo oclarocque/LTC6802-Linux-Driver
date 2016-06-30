@@ -12,81 +12,94 @@
 #include <linux/iio/triggered_buffer.h>
 
 /* LTC6802 Commands */
+/* Write Configuration Register Group */
 #define LTC6802_CMD_WRCFG		0x01
+/* Read Configuration Register Group */
 #define LTC6802_CMD_RDCFG		0x02
+/* Read Cell Voltage Register Group */
 #define LTC6802_CMD_RDCV		0x04
+/* Read Flag Register Group */
 #define LTC6802_CMD_RDFLG		0x06
+/* Read Temperature Register Group */
 #define LTC6802_CMD_RDTMP		0x08
-#define LTC6802_CMD_STCVAD		0x10
-  #define LTC6802_CMD_STCVAD_CELL1	0x11
-  #define LTC6802_CMD_STCVAD_CELL2	0x12
-  #define LTC6802_CMD_STCVAD_CELL3	0x13
-  #define LTC6802_CMD_STCVAD_CELL4	0x14
-  #define LTC6802_CMD_STCVAD_CELL5	0x15
-  #define LTC6802_CMD_STCVAD_CELL6	0x16
-  #define LTC6802_CMD_STCVAD_CELL7	0x17
-  #define LTC6802_CMD_STCVAD_CELL8	0x18
-  #define LTC6802_CMD_STCVAD_CELL9	0x19
-  #define LTC6802_CMD_STCVAD_CELL10	0x1A
-  #define LTC6802_CMD_STCVAD_CELL11	0x1B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVAD_CELL12	0x1C /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVAD_TEST1	0x1E
-  #define LTC6802_CMD_STCVAD_TEST2	0x1F
-#define LTC6802_CMD_STOWAD		0x10
-  #define LTC6802_CMD_STOWAD_CELL1	0x21
-  #define LTC6802_CMD_STOWAD_CELL2	0x22
-  #define LTC6802_CMD_STOWAD_CELL3	0x23
-  #define LTC6802_CMD_STOWAD_CELL4	0x24
-  #define LTC6802_CMD_STOWAD_CELL5	0x25
-  #define LTC6802_CMD_STOWAD_CELL6	0x26
-  #define LTC6802_CMD_STOWAD_CELL7	0x27
-  #define LTC6802_CMD_STOWAD_CELL8	0x28
-  #define LTC6802_CMD_STOWAD_CELL9	0x29
-  #define LTC6802_CMD_STOWAD_CELL10	0x2A
-  #define LTC6802_CMD_STOWAD_CELL11	0x2B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STOWAD_CELL12	0x2C /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STOWAD_TEST1	0x2E
-  #define LTC6802_CMD_STOWAD_TEST2	0x2F
-#define LTC6802_CMD_STTMPAD		0x30
-  #define LTC6802_CMD_STTMPAD_ETEMP1	0x31
-  #define LTC6802_CMD_STTMPAD_ETEMP2	0x32
-  #define LTC6802_CMD_STTMPAD_ITEMP	0x33
-  #define LTC6802_CMD_STTMPAD_TEST1	0x3E
-  #define LTC6802_CMD_STTMPAD_TEST2	0x3F
+/* Start Cell Voltage A/D Conversions and Poll Status */
+#define LTC6802_CMD_STCVAD_ALL		0x10
+#define LTC6802_CMD_STCVAD_CELL1	0x11
+#define LTC6802_CMD_STCVAD_CELL2	0x12
+#define LTC6802_CMD_STCVAD_CELL3	0x13
+#define LTC6802_CMD_STCVAD_CELL4	0x14
+#define LTC6802_CMD_STCVAD_CELL5	0x15
+#define LTC6802_CMD_STCVAD_CELL6	0x16
+#define LTC6802_CMD_STCVAD_CELL7	0x17
+#define LTC6802_CMD_STCVAD_CELL8	0x18
+#define LTC6802_CMD_STCVAD_CELL9	0x19
+#define LTC6802_CMD_STCVAD_CELL10	0x1A
+#define LTC6802_CMD_STCVAD_CELL11	0x1B /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STCVAD_CELL12	0x1C /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STCVAD_TEST1	0x1E
+#define LTC6802_CMD_STCVAD_TEST2	0x1F
+/* Start Open-Wire A/D Conversions and Poll Status */
+#define LTC6802_CMD_STOWAD_ALL		0x20
+#define LTC6802_CMD_STOWAD_CELL1	0x21
+#define LTC6802_CMD_STOWAD_CELL2	0x22
+#define LTC6802_CMD_STOWAD_CELL3	0x23
+#define LTC6802_CMD_STOWAD_CELL4	0x24
+#define LTC6802_CMD_STOWAD_CELL5	0x25
+#define LTC6802_CMD_STOWAD_CELL6	0x26
+#define LTC6802_CMD_STOWAD_CELL7	0x27
+#define LTC6802_CMD_STOWAD_CELL8	0x28
+#define LTC6802_CMD_STOWAD_CELL9	0x29
+#define LTC6802_CMD_STOWAD_CELL10	0x2A
+#define LTC6802_CMD_STOWAD_CELL11	0x2B /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STOWAD_CELL12	0x2C /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STOWAD_TEST1	0x2E
+#define LTC6802_CMD_STOWAD_TEST2	0x2F
+/* Start Temperature A/D Conversions and Poll Status */
+#define LTC6802_CMD_STTMPAD_ALL		0x30
+#define LTC6802_CMD_STTMPAD_ETEMP1	0x31
+#define LTC6802_CMD_STTMPAD_ETEMP2	0x32
+#define LTC6802_CMD_STTMPAD_ITEMP	0x33
+#define LTC6802_CMD_STTMPAD_TEST1	0x3E
+#define LTC6802_CMD_STTMPAD_TEST2	0x3F
+/* Poll A/D Converter Status */
 #define LTC6802_CMD_PLADC		0x40
+/* Poll Interrupt Status */
 #define LTC6802_CMD_PLINT		0x50
-#define LTC6802_CMD_STCVDC		0x60
-  #define LTC6802_CMD_STCVDC_CELL1	0x61
-  #define LTC6802_CMD_STCVDC_CELL2	0x62
-  #define LTC6802_CMD_STCVDC_CELL3	0x63
-  #define LTC6802_CMD_STCVDC_CELL4	0x64
-  #define LTC6802_CMD_STCVDC_CELL5	0x65
-  #define LTC6802_CMD_STCVDC_CELL6	0x66
-  #define LTC6802_CMD_STCVDC_CELL7	0x67
-  #define LTC6802_CMD_STCVDC_CELL8	0x68
-  #define LTC6802_CMD_STCVDC_CELL9	0x69
-  #define LTC6802_CMD_STCVDC_CELL10	0x6A
-  #define LTC6802_CMD_STCVDC_CELL11	0x6B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVDC_CELL12	0x6C /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STCVDC_TEST1	0x6E
-  #define LTC6802_CMD_STCVDC_TEST2	0x6F
-#define LTC6802_CMD_STOWDC		0x70
-  #define LTC6802_CMD_STOWDC_CELL1	0x71
-  #define LTC6802_CMD_STOWDC_CELL2	0x72
-  #define LTC6802_CMD_STOWDC_CELL3	0x73
-  #define LTC6802_CMD_STOWDC_CELL4	0x74
-  #define LTC6802_CMD_STOWDC_CELL5	0x75
-  #define LTC6802_CMD_STOWDC_CELL6	0x76
-  #define LTC6802_CMD_STOWDC_CELL7	0x77
-  #define LTC6802_CMD_STOWDC_CELL8	0x78
-  #define LTC6802_CMD_STOWDC_CELL9	0x79
-  #define LTC6802_CMD_STOWDC_CELL10	0x7A
-  #define LTC6802_CMD_STOWDC_CELL11	0x7B /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STOWDC_CELL12	0x7C /* if CELL10 bit = 0 */
-  #define LTC6802_CMD_STOWDC_TEST1	0x7E
-  #define LTC6802_CMD_STOWDC_TEST2	0x7F
+/* Start Cell Voltage A/D Conversions and Poll Status, Discharge Permitted */
+#define LTC6802_CMD_STCVDC_ALL		0x60
+#define LTC6802_CMD_STCVDC_CELL1	0x61
+#define LTC6802_CMD_STCVDC_CELL2	0x62
+#define LTC6802_CMD_STCVDC_CELL3	0x63
+#define LTC6802_CMD_STCVDC_CELL4	0x64
+#define LTC6802_CMD_STCVDC_CELL5	0x65
+#define LTC6802_CMD_STCVDC_CELL6	0x66
+#define LTC6802_CMD_STCVDC_CELL7	0x67
+#define LTC6802_CMD_STCVDC_CELL8	0x68
+#define LTC6802_CMD_STCVDC_CELL9	0x69
+#define LTC6802_CMD_STCVDC_CELL10	0x6A
+#define LTC6802_CMD_STCVDC_CELL11	0x6B /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STCVDC_CELL12	0x6C /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STCVDC_TEST1	0x6E
+#define LTC6802_CMD_STCVDC_TEST2	0x6F
+/* Start Open-Wire A/D Conversions and Poll Status, Discharge Permitted */
+#define LTC6802_CMD_STOWDC_ALL		0x70
+#define LTC6802_CMD_STOWDC_CELL1	0x71
+#define LTC6802_CMD_STOWDC_CELL2	0x72
+#define LTC6802_CMD_STOWDC_CELL3	0x73
+#define LTC6802_CMD_STOWDC_CELL4	0x74
+#define LTC6802_CMD_STOWDC_CELL5	0x75
+#define LTC6802_CMD_STOWDC_CELL6	0x76
+#define LTC6802_CMD_STOWDC_CELL7	0x77
+#define LTC6802_CMD_STOWDC_CELL8	0x78
+#define LTC6802_CMD_STOWDC_CELL9	0x79
+#define LTC6802_CMD_STOWDC_CELL10	0x7A
+#define LTC6802_CMD_STOWDC_CELL11	0x7B /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STOWDC_CELL12	0x7C /* if CELL10 bit = 0 */
+#define LTC6802_CMD_STOWDC_TEST1	0x7E
+#define LTC6802_CMD_STOWDC_TEST2	0x7F
 
-/* LTC6802 Configuration Register Group 0 */
+/* LTC6802 Configuration Register Groups */
+/* Group 0 */
 #define LTC6802_CFGR0_WDT		BIT(7)
 #define LTC6802_CFGR0_GPIO2		BIT(6)
 #define LTC6802_CFGR0_GPIO1		BIT(5)
@@ -100,8 +113,7 @@
 #define LTC6802_CFGR0_CDC_MODE5		0x101
 #define LTC6802_CFGR0_CDC_MODE6		0x110
 #define LTC6802_CFGR0_CDC_MODE7		0x111
-
-/* LTC6802 Configuration Register Group 1 */
+/* Group 1 */
 #define LTC6802_CFGR1_DCC7		BIT(7)
 #define LTC6802_CFGR1_DCC6		BIT(6)
 #define LTC6802_CFGR1_DCC5		BIT(5)
@@ -110,8 +122,7 @@
 #define LTC6802_CFGR1_DCC2		BIT(2)
 #define LTC6802_CFGR1_DCC1		BIT(1)
 #define LTC6802_CFGR1_DCC0		BIT(0)
-
-/* LTC6802 Configuration Register Group 2 */
+/* Group 2 */
 #define LTC6802_CFGR2_MC4I		BIT(7)
 #define LTC6802_CFGR2_MC3I		BIT(6)
 #define LTC6802_CFGR2_MC2I		BIT(5)
@@ -120,8 +131,7 @@
 #define LTC6802_CFGR2_DCC11		BIT(2)
 #define LTC6802_CFGR2_DCC10		BIT(1)
 #define LTC6802_CFGR2_DCC9		BIT(0)
-
-/* LTC6802 Configuration Register Group 3 */
+/* Group 3 */
 #define LTC6802_CFGR3_MC12I		BIT(7)
 #define LTC6802_CFGR3_MC11I		BIT(6)
 #define LTC6802_CFGR3_MC10I		BIT(5)
@@ -131,12 +141,10 @@
 #define LTC6802_CFGR3_MC6I		BIT(1)
 #define LTC6802_CFGR3_MC5I		BIT(0)
 
-#define LTC6802_INPUT_DELTA_MV		6144
-#define LTC6802_ADC_RESOLUTION_BIT	12
-#define LTC6802_ADDR_CMD_SOF		1000
-#define LTC6802_ADDR_BYTE_POS		0
-#define LTC6802_CMD_BYTE_POS		1
-#define LTC6802_RX_BUF_SIZE		19
+#define LTC6802_INPUT_DELTA_MV			6144
+#define LTC6802_ADC_RESOLUTION_BIT		12
+#define LTC6802_ADDR_CMD_SOF			1000
+#define LTC6802_RX_BUF_SIZE			19
 
 enum ltc6802_register_group {
 	LTC6802_CFG,
@@ -278,19 +286,19 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 		},
 	};
 
-	tx_buf[LTC6802_ADDR_BYTE_POS] = (LTC6802_ADDR_CMD_SOF << 4) | st->address;;
+	tx_buf[0] = (LTC6802_ADDR_CMD_SOF << 4) | st->address;
 	switch(reg) {
 	case LTC6802_CFG:
-		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDCFG;
+		tx_buf[1] = LTC6802_CMD_RDCFG;
 		break;
 	case LTC6802_CV:
-		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDCV;
+		tx_buf[1] = LTC6802_CMD_RDCV;
 		break;
 	case LTC6802_FLG:
-		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDFLG;
+		tx_buf[1] = LTC6802_CMD_RDFLG;
 		break;
 	case LTC6802_TMP:
-		tx_buf[LTC6802_CMD_BYTE_POS] = LTC6802_CMD_RDTMP;
+		tx_buf[1] = LTC6802_CMD_RDTMP;
 		break;
 	default:
 		return -EINVAL;
@@ -339,8 +347,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
 	/* Get LTC6802 out of default standby mode */
-	st->cfg_reg[0] = LTC6802_CFGR0_CDC_MODE1;
-	st->cfg_reg[1] = LTC6802_CMD_WRCFG;
+	st->cfg_reg[0] = LTC6802_CMD_WRCFG;
+	st->cfg_reg[1] = LTC6802_CFGR0_CDC_MODE1;
 	st->cfg_reg[2] = 0x00;
 	st->cfg_reg[3] = 0x00;
 	st->cfg_reg[4] = 0x00;
@@ -374,7 +382,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 
 	mdelay(30); /* Wait for the conversion to be complete */
 	
-	ret = ltc6802_read_reg_group(indio_dev, reg, rx_buf, ARRAY_SIZE(rx_buf));
+	ret = ltc6802_read_reg_group(indio_dev, reg,
+				     rx_buf, ARRAY_SIZE(rx_buf));
 	*val = ltc6802_get_chan_value_from_reg_group(chan->channel, rx_buf);
 
 	return IIO_VAL_INT;
@@ -436,24 +445,40 @@ static ssize_t digital_io_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(cell1_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell2_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell3_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell4_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell5_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell6_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell7_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell8_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell9_bypass,  S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell10_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell11_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell12_bypass, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell1_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell2_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell3_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell4_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell5_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell6_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell7_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell8_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell9_bypass,  S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell10_bypass, S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell11_bypass, S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell12_bypass, S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
 
-static DEVICE_ATTR(gpio1_value, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(gpio2_value, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio1_value, S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio2_value, S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
 
-static DEVICE_ATTR(gpio1_direction, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
-static DEVICE_ATTR(gpio2_direction, S_IWUSR | S_IRUGO, digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio1_direction, S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio2_direction, S_IWUSR | S_IRUGO,
+		   digital_io_show, digital_io_store);
 
 static struct attribute *dev_attrs[] = {
 	&dev_attr_cell1_bypass.attr,
@@ -497,13 +522,13 @@ static int ltc6802_probe(struct spi_device *spi)
 	st->spi = spi;
 	st->info = &ltc6802_chip_info_tbl[spi_get_device_id(spi)->driver_data];
 
-	ltc6802_addr = of_get_property(st->spi->dev.of_node, "ltc6802,addr", NULL);
+	ltc6802_addr = of_get_property(st->spi->dev.of_node,
+				       "ltc6802,addr", NULL);
 	if (!ltc6802_addr) {
 		pr_err("ltc6802,addr field not present in device node\n");
 		return -EINVAL;
 	}
 	st->address = be32_to_cpup(ltc6802_addr);
-	pr_info("Addr: %d\n", st->address);
 
 	mutex_init(&st->lock);
 
@@ -513,7 +538,7 @@ static int ltc6802_probe(struct spi_device *spi)
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = st->info->channels;
 	indio_dev->num_channels = st->info->num_channels;
-	/* indio_dev->groups[0] is already used by &indio_dev->chan_attr_group */
+	/* index 1 is already used by chan_attr_group */
 	indio_dev->groups[1] = dev_groups[0];
 
 	st->buffer = devm_kmalloc(&indio_dev->dev,
