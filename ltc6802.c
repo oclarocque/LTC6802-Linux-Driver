@@ -134,6 +134,13 @@
 #define LTC6802_INPUT_DELTA_MV		6144
 #define LTC6802_ADC_RESOLUTION_BIT	12
 
+enum ltc6802_register_group {
+	LTC6802_CFG,
+	LTC6802_CV,
+	LTC6802_FLG,
+	LTC6802_TMP
+};
+
 static ssize_t test = 0;
 
 enum ltc6802_id {
@@ -222,7 +229,49 @@ struct ltc6802_state {
 	u8				cfg_reg[6] ____cacheline_aligned;
 };
 
-static int ltc6802_get_cell_voltage_from_rx_buffer(int chan, u8 *buf)
+static int ltc6802_read_register_group(struct iio_dev *indio_dev, 
+				       int reg, u8 *rx_buf, int rx_buf_size)
+{
+	int ret;
+	u8 tx_buf[2];
+	struct ltc6802_state *st = iio_priv(indio_dev);
+	struct spi_transfer t[2] = {
+		{
+		       .tx_buf = tx_buf,
+		       .len = ARRAY_SIZE(tx_buf),
+		}, {
+		       .rx_buf = rx_buf,
+		       .len = rx_buf_size,
+		},
+	};
+
+	tx_buf[0] = 0x80;
+	switch(reg) {
+	case LTC6802_CFG:
+		tx_buf[1] = LTC6802_CMD_RDCFG;
+		break;
+	case LTC6802_CV:
+		tx_buf[1] = LTC6802_CMD_RDCV;
+		break;
+	case LTC6802_FLG:
+		tx_buf[1] = LTC6802_CMD_RDFLG;
+		break;
+	case LTC6802_TMP:
+		tx_buf[1] = LTC6802_CMD_RDTMP;
+		break;
+	default:
+		return -EINVAL;
+	}
+	
+	ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
+	if (ret < 0) {
+		dev_err(&indio_dev->dev,
+			"Failed to read register group\n");
+	}
+	return ret;
+}
+
+static int ltc6802_get_voltage_from_cv_reg_group(int chan, u8 *buf)
 {
 	int voltage;
 	int index;
@@ -245,20 +294,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 				     int *val)
 {
 	int ret;
-	//struct spi_transfer t[2];
+	u8 rx_buf[19];
 	struct ltc6802_state *st = iio_priv(indio_dev);
-	u8 buf_tx2[2] = {0x80, LTC6802_CMD_RDCV};
-	u8 buf_rx[19];
-
-	struct spi_transfer t2[] = {
-		{
-		       .tx_buf = buf_tx2,
-		       .len = 2,
-		}, {
-		       .rx_buf = buf_rx,
-		       .len = 19,
-		},
-	};
 
 	/* Get LTC6802 out of default standby mode */
 	st->cfg_reg[0] = LTC6802_CFGR0_CDC_MODE1;
@@ -283,21 +320,10 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	}
 
 	mdelay(30);
+	
+	ret = ltc6802_read_register_group(indio_dev, LTC6802_CV, rx_buf, ARRAY_SIZE(rx_buf));
 
-	// st->cfg_reg[0] = 0x80;
-	// st->cfg_reg[1] = LTC6802_CMD_RDCV;
-	// t[0].tx_buf = st->cfg_reg;
-	// t[0].len = 2;
-	// t[1].rx_buf = &cv;
-	// t[1].len = 19;
-	ret = spi_sync_transfer(st->spi, t2, ARRAY_SIZE(t2));
-	if (ret < 0) {
-		dev_err(&indio_dev->dev,
-			"Failed to read conversion registers\n");
-		return ret;
-	}
-
-	*val = ltc6802_get_cell_voltage_from_rx_buffer(chan->channel, t2[1].rx_buf);
+	*val = ltc6802_get_voltage_from_cv_reg_group(chan->channel, rx_buf);
 
 	return IIO_VAL_INT;
 }
