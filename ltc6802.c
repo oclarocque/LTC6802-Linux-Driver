@@ -184,11 +184,11 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 	}
 
 static const struct iio_chan_spec ltc6802_channels[] = {
-	LTC6802_T_CHAN(0),
-	LTC6802_T_CHAN(1),
-	LTC6802_T_CHAN(2),
-	LTC6802_V_CHAN(1),
-	LTC6802_DV_CHAN(2),
+	LTC6802_T_CHAN(0),  /* Int. temp   */
+	LTC6802_T_CHAN(1),  /* Ext. temp 1 */
+	LTC6802_T_CHAN(2),  /* Ext. temp 2 */
+	LTC6802_V_CHAN(1),  /* Voltage channels start at 1 to match.. */
+	LTC6802_DV_CHAN(2), /* ..cells numbering in datasheet         */
 	LTC6802_DV_CHAN(3),
 	LTC6802_DV_CHAN(4),
 	LTC6802_DV_CHAN(5),
