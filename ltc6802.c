@@ -23,7 +23,7 @@
 /* Read Temperature Register Group */
 #define LTC6802_CMD_RDTMP		0x08
 /* Start Cell Voltage A/D Conversions and Poll Status */
-#define LTC6802_CMD_STCVAD_ALL		0x10
+#define LTC6802_CMD_STCVAD		0x10
 #define LTC6802_CMD_STCVAD_CELL1	0x11
 #define LTC6802_CMD_STCVAD_CELL2	0x12
 #define LTC6802_CMD_STCVAD_CELL3	0x13
@@ -55,7 +55,7 @@
 #define LTC6802_CMD_STOWAD_TEST1	0x2E
 #define LTC6802_CMD_STOWAD_TEST2	0x2F
 /* Start Temperature A/D Conversions and Poll Status */
-#define LTC6802_CMD_STTMPAD_ALL		0x30
+#define LTC6802_CMD_STTMPAD		0x30
 #define LTC6802_CMD_STTMPAD_ETEMP1	0x31
 #define LTC6802_CMD_STTMPAD_ETEMP2	0x32
 #define LTC6802_CMD_STTMPAD_ITEMP	0x33
@@ -66,7 +66,7 @@
 /* Poll Interrupt Status */
 #define LTC6802_CMD_PLINT		0x50
 /* Start Cell Voltage A/D Conversions and Poll Status, Discharge Permitted */
-#define LTC6802_CMD_STCVDC_ALL		0x60
+#define LTC6802_CMD_STCVDC		0x60
 #define LTC6802_CMD_STCVDC_CELL1	0x61
 #define LTC6802_CMD_STCVDC_CELL2	0x62
 #define LTC6802_CMD_STCVDC_CELL3	0x63
@@ -82,7 +82,7 @@
 #define LTC6802_CMD_STCVDC_TEST1	0x6E
 #define LTC6802_CMD_STCVDC_TEST2	0x6F
 /* Start Open-Wire A/D Conversions and Poll Status, Discharge Permitted */
-#define LTC6802_CMD_STOWDC_ALL		0x70
+#define LTC6802_CMD_STOWDC		0x70
 #define LTC6802_CMD_STOWDC_CELL1	0x71
 #define LTC6802_CMD_STOWDC_CELL2	0x72
 #define LTC6802_CMD_STOWDC_CELL3	0x73
@@ -141,10 +141,11 @@
 #define LTC6802_CFGR3_MC6I		BIT(1)
 #define LTC6802_CFGR3_MC5I		BIT(0)
 
-#define LTC6802_INPUT_DELTA_MV			6144
-#define LTC6802_ADC_RESOLUTION_BIT		12
-#define LTC6802_ADDR_CMD_SOF			1000
-#define LTC6802_RX_BUF_SIZE			19
+#define LTC6802_INPUT_DELTA_MV		6144
+#define LTC6802_ADC_RESOLUTION_BIT	12
+#define LTC6802_ADDR_CMD_SOF		1000
+#define LTC6802_RX_BUF_SIZE		19
+#define LTC6802_CHAN(n)   		(n + 1)
 
 enum ltc6802_register_group {
 	LTC6802_CFG,
@@ -177,7 +178,7 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 	{								\
 		.type = IIO_VOLTAGE,					\
 		.indexed = 1,						\
-		.channel = index,					\
+		.channel = LTC6802_CHAN(index),				\
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),		\
 		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SCALE),	\
 	}
@@ -186,8 +187,8 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 	{								\
 		.type = IIO_VOLTAGE,					\
 		.indexed = 1,						\
-		.channel = index,					\
-		.channel2 = index - 1,					\
+		.channel = LTC6802_CHAN(index),				\
+		.channel2 = LTC6802_CHAN(index) - 1,			\
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),		\
 		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SCALE),	\
 		.differential = 1,					\
@@ -197,15 +198,15 @@ MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
 	{								\
 		.type = IIO_TEMP,					\
 		.indexed = 1,						\
-		.channel = index,					\
+		.channel = LTC6802_CHAN(index),				\
 		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW),		\
 		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SCALE),	\
 	}
 
 static const struct iio_chan_spec ltc6802_channels[] = {
-	LTC6802_T_CHAN(0),  /* Int. temp   */
-	LTC6802_T_CHAN(1),  /* Ext. temp 1 */
-	LTC6802_T_CHAN(2),  /* Ext. temp 2 */
+	LTC6802_T_CHAN(0),
+	LTC6802_T_CHAN(1),
+	LTC6802_T_CHAN(2),
 	LTC6802_V_CHAN(0),
 	LTC6802_DV_CHAN(1),
 	LTC6802_DV_CHAN(2),
@@ -235,7 +236,8 @@ static const struct ltc6802_chip_info ltc6802_chip_info_tbl[] = {
 struct ltc6802_state {
 	const struct ltc6802_chip_info	*info;
 	struct spi_device		*spi;
-	__be16				*buffer;
+	struct spi_transfer		single_xfer[2];
+	struct spi_message		single_msg;
 	struct mutex			lock;
 	unsigned int			address;
 	u8				cfg_reg[6] ____cacheline_aligned;
@@ -319,18 +321,17 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 	return ret;
 }
 
-static int ltc6802_get_chan_value_from_reg_group(int chan, u8 *buf)
+static int ltc6802_extract_chan_value(int channel, u8 *buf)
 {
 	int value;
 	int index;
 
-	chan++;
-	if (chan % 2) {
-		index = (chan - 1) + ((chan - 1) / 2);
+	if (channel % 2) {
+		index = (channel - 1) + ((channel - 1) / 2);
 		value = ((buf[index + 1] & 0x0F) << 8) | buf[index];
 
 	} else {
-		index = chan + (chan / 2) - 1;
+		index = channel + (channel / 2) - 1;
 		value = (buf[index] << 4) | ((buf[index - 1] & 0xF0) >> 4);
 	}
 
@@ -363,11 +364,11 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 
 	switch (chan->type) {
 	case IIO_TEMP:
-		st->cfg_reg[0] = LTC6802_CMD_STTMPAD_TEST2;
+		st->cfg_reg[0] = LTC6802_CMD_STTMPAD | chan->channel;
 		reg = LTC6802_TMP;
 		break;
 	case IIO_VOLTAGE:
-		st->cfg_reg[0] = LTC6802_CMD_STCVAD_TEST2;
+		st->cfg_reg[0] = LTC6802_CMD_STCVAD | chan->channel;
 		reg = LTC6802_CV;
 		break;
 	default:
@@ -380,11 +381,11 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 			"Failed to request A/D conversion start\n");
 	}
 
-	mdelay(30); /* Wait for the conversion to be complete */
+	mdelay(2); /* Wait for the conversion to be complete */
 	
 	ret = ltc6802_read_reg_group(indio_dev, reg,
 				     rx_buf, ARRAY_SIZE(rx_buf));
-	*val = ltc6802_get_chan_value_from_reg_group(chan->channel, rx_buf);
+	*val = ltc6802_extract_chan_value(chan->channel, rx_buf);
 
 	return IIO_VAL_INT;
 }
@@ -538,16 +539,8 @@ static int ltc6802_probe(struct spi_device *spi)
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = st->info->channels;
 	indio_dev->num_channels = st->info->num_channels;
-	/* index 1 is already used by chan_attr_group */
+	/* index 0 is already used by chan_attr_group */
 	indio_dev->groups[1] = dev_groups[0];
-
-	st->buffer = devm_kmalloc(&indio_dev->dev,
-				  indio_dev->num_channels * 2,
-				  GFP_KERNEL);
-	if (st->buffer == NULL) {
-		dev_err(&indio_dev->dev, "Can't allocate buffer\n");
-		return -ENOMEM;
-	}
 
 	ret = iio_device_register(indio_dev);
 	if (ret < 0) {
