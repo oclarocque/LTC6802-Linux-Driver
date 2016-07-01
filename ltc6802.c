@@ -44,14 +44,14 @@
 #define LTC6802_CFGR0_GPIO1		BIT(5)
 #define LTC6802_CFGR0_LVPL		BIT(4)
 #define LTC6802_CFGR0_CELL10		BIT(3)
-#define LTC6802_CFGR0_CDC_MODE0		0x000
-#define LTC6802_CFGR0_CDC_MODE1		0x001
-#define LTC6802_CFGR0_CDC_MODE2		0x010
-#define LTC6802_CFGR0_CDC_MODE3		0x011
-#define LTC6802_CFGR0_CDC_MODE4		0x100
-#define LTC6802_CFGR0_CDC_MODE5		0x101
-#define LTC6802_CFGR0_CDC_MODE6		0x110
-#define LTC6802_CFGR0_CDC_MODE7		0x111
+#define LTC6802_CFGR0_CDC_MODE0		0
+#define LTC6802_CFGR0_CDC_MODE1		1
+#define LTC6802_CFGR0_CDC_MODE2		2
+#define LTC6802_CFGR0_CDC_MODE3		3
+#define LTC6802_CFGR0_CDC_MODE4		4
+#define LTC6802_CFGR0_CDC_MODE5		5
+#define LTC6802_CFGR0_CDC_MODE6		6
+#define LTC6802_CFGR0_CDC_MODE7		7
 /* Group 1 */
 #define LTC6802_CFGR1_DCC7		BIT(7)
 #define LTC6802_CFGR1_DCC6		BIT(6)
@@ -284,7 +284,45 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	int ret;
 	int reg;
 	u8 rx_buf[LTC6802_RX_BUF_SIZE];
+	u8 tx_buf[1];
 	struct ltc6802_state *st = iio_priv(indio_dev);
+	struct spi_transfer t[] = {
+		{
+		       .tx_buf = tx_buf,
+		       .len = ARRAY_SIZE(tx_buf),
+		       .delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		},{
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		},
+	};
 
 	/* Get LTC6802 out of default standby mode */
 	st->cfg_reg[0] = LTC6802_CMD_WRCFG;
@@ -303,24 +341,31 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 
 	switch (chan->type) {
 	case IIO_TEMP:
-		st->cfg_reg[0] = LTC6802_CMD_STTMPAD | chan->channel;
+		tx_buf[0] = LTC6802_CMD_STTMPAD | chan->channel;
 		reg = LTC6802_TMP;
 		break;
 	case IIO_VOLTAGE:
-		st->cfg_reg[0] = LTC6802_CMD_STCVAD | chan->channel;
+		tx_buf[0] = LTC6802_CMD_STCVAD | chan->channel;
 		reg = LTC6802_CV;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	ret = spi_write(st->spi, &st->cfg_reg, 1);
+	ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
 	if (ret < 0) {
 		dev_err(&indio_dev->dev,
-			"Failed to request A/D conversion start\n");
+			"Failed to read register group\n");
 	}
 
-	mdelay(2); /* Wait for the conversion to be complete */
+	/*
+	 * Datasheet specifies a conversion time between 1 ms to 1.5 ms
+	 * for a single channel. Tests have shown that the first conversion of
+	 * a given channel takes approx. 8.5 ms and it is only the conversions
+	 * of the same channel immediately following the first one that respect
+	 * the datasheet timing.
+	 */
+	mdelay(10);
 	
 	ret = ltc6802_read_reg_group(indio_dev, reg,
 				     rx_buf, ARRAY_SIZE(rx_buf));
