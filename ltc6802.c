@@ -286,43 +286,6 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	u8 rx_buf[LTC6802_RX_BUF_SIZE];
 	u8 tx_buf[1];
 	struct ltc6802_state *st = iio_priv(indio_dev);
-	struct spi_transfer t[] = {
-		{
-		       .tx_buf = tx_buf,
-		       .len = ARRAY_SIZE(tx_buf),
-		       .delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		},{
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		}, {
-		.delay_usecs = 2000,
-		},
-	};
 
 	/* Get LTC6802 out of default standby mode */
 	st->cfg_reg[0] = LTC6802_CMD_WRCFG;
@@ -352,10 +315,10 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 		return -EINVAL;
 	}
 
-	ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
+	ret = spi_write(st->spi, tx_buf, 1);
 	if (ret < 0) {
 		dev_err(&indio_dev->dev,
-			"Failed to read register group\n");
+			"Failed to request channel conversion\n");
 	}
 
 	/*
