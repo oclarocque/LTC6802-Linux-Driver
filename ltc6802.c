@@ -75,6 +75,7 @@
 #define LTC6802_INPUT_DELTA_MV		6144
 #define LTC6802_ADC_RESOLUTION_BIT	12
 #define LTC6802_ADDR_CMD_SOF		1000
+#define LTC6802_CFGR0_CDC_MASK		0x07
 #define LTC6802_CHAN(n)   		(n + 1)
 
 enum ltc6802_register_group {
@@ -271,26 +272,41 @@ static int ltc6802_extract_chan_value(int channel, u8 *buf)
 	return value;
 }
 
+static bool ltc6802_is_standby(struct iio_dev *indio_dev)
+{
+	struct ltc6802_state *st = iio_priv(indio_dev);
+
+	ltc6802_read_reg_group(indio_dev, LTC6802_CFG, st->rx_buf);
+
+	return ((st->rx_buf[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0);
+}
+
 static int ltc6802_read_single_value(struct iio_dev *indio_dev,
-				     struct iio_chan_spec const *chan,
-				     int *val)
+				     struct iio_chan_spec const *chan, int *val)
 {
 	int ret;
 	int reg;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	/* Get LTC6802 out of default standby mode */
-	st->tx_buf[0] = LTC6802_CMD_WRCFG;
-	st->tx_buf[1] = LTC6802_CFGR0_CDC_MODE1;
-	st->tx_buf[2] = 0x00;
-	st->tx_buf[3] = 0x00;
-	st->tx_buf[4] = 0x00;
-	st->tx_buf[5] = 0x00;
-	st->tx_buf[6] = 0x00;
-	ret = spi_write(st->spi, &st->tx_buf, 7);
-	if (ret) {
-		dev_err(&indio_dev->dev, "Failed to configure device\n");
-		return ret;
+	/*
+	 * Device falls into standby mode if no activity is detected on the SCKI
+	 * pin for 2.5 seconds. When in standby mode, the ADC is turned off so
+	 * it needs to be waken up before requesting a conversion.
+	 */
+	if (ltc6802_is_standby(indio_dev)) {
+		st->tx_buf[0] = LTC6802_CMD_WRCFG;
+		st->tx_buf[1] = LTC6802_CFGR0_CDC_MODE1;
+		st->tx_buf[2] = 0x00;
+		st->tx_buf[3] = 0x00;
+		st->tx_buf[4] = 0x00;
+		st->tx_buf[5] = 0x00;
+		st->tx_buf[6] = 0x00;
+		ret = spi_write(st->spi, &st->tx_buf, 7);
+		if (ret) {
+			dev_err(&indio_dev->dev,
+				"Failed to get device out of standby mode\n");
+			return ret;
+		}
 	}
 
 	switch (chan->type) {
@@ -459,7 +475,6 @@ static int ltc6802_probe(struct spi_device *spi)
 	st->spi = spi;
 	st->info = &ltc6802_chip_info_tbl[spi_get_device_id(spi)->driver_data];
 
-	/* Get serial interface address */
 	ltc6802_addr = of_get_property(st->spi->dev.of_node,
 				       "ltc6802,address", NULL);
 	if (!ltc6802_addr) {
