@@ -75,7 +75,7 @@
 #define LTC6802_INPUT_DELTA_MV		6144
 #define LTC6802_ADC_RESOLUTION_BIT	12
 #define LTC6802_ADDR_CMD_SOF		1000
-#define LTC6802_CFGR0_CDC_MASK		0x07
+#define LTC6802_CDC_MASK		0x07
 #define LTC6802_CHAN(n)   		(n + 1)
 
 enum ltc6802_register_group {
