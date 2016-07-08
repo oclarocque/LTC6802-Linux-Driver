@@ -75,7 +75,6 @@
 #define LTC6802_INPUT_DELTA_MV		6144
 #define LTC6802_ADC_RESOLUTION_BIT	12
 #define LTC6802_ADDR_CMD_SOF		1000
-#define LTC6802_RX_BUF_SIZE		19
 #define LTC6802_CHAN(n)   		(n + 1)
 
 enum ltc6802_register_group {
@@ -167,11 +166,10 @@ static const struct ltc6802_chip_info ltc6802_chip_info_tbl[] = {
 struct ltc6802_state {
 	const struct ltc6802_chip_info	*info;
 	struct spi_device		*spi;
-	struct spi_transfer		single_xfer[2];
-	struct spi_message		single_msg;
 	struct mutex			lock;
 	unsigned int			address;
-	u8				cfg_reg[6] ____cacheline_aligned;
+	u8 				tx_buf[7]  ____cacheline_aligned;
+	u8 				rx_buf[19] ____cacheline_aligned;
 };
 
 static u8 ltc6802_crc8(u8 crc_in, u8 data)
@@ -203,48 +201,52 @@ static u8 ltc6802_pec_calculation(u8 *buf, int size)
 }
 
 static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
-				  int reg, u8 *rx_buf, int rx_buf_size)
+				  int reg, u8 *rx_buf)
 {
 	int ret;
+	int rx_buf_size;
 	u8 pec;
-	u8 tx_buf[2];
 	struct ltc6802_state *st = iio_priv(indio_dev);
-	struct spi_transfer t[] = {
+	struct spi_transfer xfers[] = {
 		{
-		       .tx_buf = tx_buf,
-		       .len = ARRAY_SIZE(tx_buf),
+		       .tx_buf = st->tx_buf,
+		       .len = 2,
 		}, {
-		       .rx_buf = rx_buf,
-		       .len = rx_buf_size,
+		       .rx_buf = st->rx_buf,
 		},
 	};
 
-	tx_buf[0] = (LTC6802_ADDR_CMD_SOF << 4) | st->address;
+	st->tx_buf[0] = (LTC6802_ADDR_CMD_SOF << 4) | st->address;
 	switch(reg) {
 	case LTC6802_CFG:
-		tx_buf[1] = LTC6802_CMD_RDCFG;
+		st->tx_buf[1] = LTC6802_CMD_RDCFG;
+		rx_buf_size = 7;
 		break;
 	case LTC6802_CV:
-		tx_buf[1] = LTC6802_CMD_RDCV;
+		st->tx_buf[1] = LTC6802_CMD_RDCV;
+		rx_buf_size = 19;
 		break;
 	case LTC6802_FLG:
-		tx_buf[1] = LTC6802_CMD_RDFLG;
+		st->tx_buf[1] = LTC6802_CMD_RDFLG;
+		rx_buf_size = 4;
 		break;
 	case LTC6802_TMP:
-		tx_buf[1] = LTC6802_CMD_RDTMP;
+		st->tx_buf[1] = LTC6802_CMD_RDTMP;
+		rx_buf_size = 6;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
+	xfers[1].len = rx_buf_size;
+	ret = spi_sync_transfer(st->spi, xfers, ARRAY_SIZE(xfers));
 	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to read register group\n");
 	}
 
-	pec = ltc6802_pec_calculation(rx_buf, rx_buf_size);
-	if (pec != rx_buf[rx_buf_size - 1]) {
+	pec = ltc6802_pec_calculation(st->rx_buf, rx_buf_size);
+	if (pec != st->rx_buf[rx_buf_size - 1]) {
 		dev_warn(&indio_dev->dev,
 			"PEC error on register group\n");
 	}
@@ -275,19 +277,17 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 {
 	int ret;
 	int reg;
-	u8 rx_buf[LTC6802_RX_BUF_SIZE];
-	u8 tx_buf[1];
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
 	/* Get LTC6802 out of default standby mode */
-	st->cfg_reg[0] = LTC6802_CMD_WRCFG;
-	st->cfg_reg[1] = LTC6802_CFGR0_CDC_MODE1;
-	st->cfg_reg[2] = 0x00;
-	st->cfg_reg[3] = 0x00;
-	st->cfg_reg[4] = 0x00;
-	st->cfg_reg[5] = 0x00;
-	st->cfg_reg[6] = 0x00;
-	ret = spi_write(st->spi, &st->cfg_reg, 7);
+	st->tx_buf[0] = LTC6802_CMD_WRCFG;
+	st->tx_buf[1] = LTC6802_CFGR0_CDC_MODE1;
+	st->tx_buf[2] = 0x00;
+	st->tx_buf[3] = 0x00;
+	st->tx_buf[4] = 0x00;
+	st->tx_buf[5] = 0x00;
+	st->tx_buf[6] = 0x00;
+	ret = spi_write(st->spi, &st->tx_buf, 7);
 	if (ret) {
 		dev_err(&indio_dev->dev, "Failed to configure device\n");
 		return ret;
@@ -295,18 +295,18 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 
 	switch (chan->type) {
 	case IIO_TEMP:
-		tx_buf[0] = LTC6802_CMD_STTMPAD | chan->channel;
+		st->tx_buf[0] = LTC6802_CMD_STTMPAD | chan->channel;
 		reg = LTC6802_TMP;
 		break;
 	case IIO_VOLTAGE:
-		tx_buf[0] = LTC6802_CMD_STCVAD | chan->channel;
+		st->tx_buf[0] = LTC6802_CMD_STCVAD | chan->channel;
 		reg = LTC6802_CV;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	ret = spi_write(st->spi, tx_buf, 1);
+	ret = spi_write(st->spi, st->tx_buf, 1);
 	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to request channel conversion\n");
@@ -322,9 +322,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 */
 	mdelay(10);
 	
-	ret = ltc6802_read_reg_group(indio_dev, reg,
-				     rx_buf, ARRAY_SIZE(rx_buf));
-	*val = ltc6802_extract_chan_value(chan->channel, rx_buf);
+	ret = ltc6802_read_reg_group(indio_dev, reg, st->rx_buf);
+	*val = ltc6802_extract_chan_value(chan->channel, st->rx_buf);
 
 	return IIO_VAL_INT;
 }
