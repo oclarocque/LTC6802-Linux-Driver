@@ -1,15 +1,7 @@
 #include <linux/module.h>
-#include <linux/kernel.h>
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
-#include <linux/gpio.h>
-#include <linux/device.h>
-
 #include <linux/iio/iio.h>
-#include <linux/iio/buffer.h>
-#include <linux/iio/trigger.h>
-#include <linux/iio/trigger_consumer.h>
-#include <linux/iio/triggered_buffer.h>
 
 /* LTC6802 Commands */
 /* Write Configuration Register Group */
@@ -32,9 +24,9 @@
 #define LTC6802_CMD_PLADC		0x40
 /* Poll Interrupt Status */
 #define LTC6802_CMD_PLINT		0x50
-/* Start Cell Voltage A/D Conversions and Poll Status, Discharge Permitted */
+/* Start Cell Voltage A/D Conversions and Poll Status, w/ Discharge Permitted */
 #define LTC6802_CMD_STCVDC		0x60
-/* Start Open-Wire A/D Conversions and Poll Status, Discharge Permitted */
+/* Start Open-Wire A/D Conversions and Poll Status, w/ Discharge Permitted */
 #define LTC6802_CMD_STOWDC		0x70
 
 /* LTC6802 Configuration Register Groups */
@@ -246,7 +238,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 	}
 
 	ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
-	if (ret < 0) {
+	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to read register group\n");
 	}
@@ -296,9 +288,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	st->cfg_reg[5] = 0x00;
 	st->cfg_reg[6] = 0x00;
 	ret = spi_write(st->spi, &st->cfg_reg, 7);
-	if (ret < 0) {
-		dev_err(&indio_dev->dev,
-			"Failed to configure config registers\n");
+	if (ret) {
+		dev_err(&indio_dev->dev, "Failed to configure device\n");
 		return ret;
 	}
 
@@ -316,17 +307,18 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	}
 
 	ret = spi_write(st->spi, tx_buf, 1);
-	if (ret < 0) {
+	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to request channel conversion\n");
 	}
 
 	/*
 	 * Datasheet specifies a conversion time between 1 ms to 1.5 ms
-	 * for a single channel. Tests have shown that the first conversion of
-	 * a given channel takes approx. 8.5 ms and it is only the conversions
-	 * of the same channel immediately following the first one that respect
-	 * the datasheet timing.
+	 * for a single channel. Tests have shown that the conversion of
+	 * a given channel takes approx. 8.5 ms. The datasheet timing is
+	 * respected only if the conversion of the same channel is requested
+	 * again without having requested the conversion of another channel
+	 * in the meantime.
 	 */
 	mdelay(10);
 	
@@ -344,11 +336,11 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 	int ret = 0;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	mutex_lock(&st->lock);
-
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
+		mutex_lock(&st->lock);
 		ret = ltc6802_read_single_value(indio_dev, chan, val);
+		mutex_unlock(&st->lock);
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		switch (chan->type) {
@@ -367,8 +359,6 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 		ret = -EINVAL;
 		break;
 	}
-
-	mutex_unlock(&st->lock);
 
 	return ret;
 }
@@ -456,11 +446,11 @@ static int ltc6802_probe(struct spi_device *spi)
 	struct iio_dev *indio_dev;
 	struct ltc6802_state *st;
 
-	pr_info("%s: probe(spi = 0x%p)\n", __func__, spi);
+	dev_info(&spi->dev, "Probing..\n");
 
 	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));
-	if (indio_dev == NULL) {
-		pr_err("Can't allocate iio device\n");
+	if (!indio_dev) {
+		dev_err(&spi->dev, "Failed to allocate IIO device\n");
 		return -ENOMEM;
 	}
 
@@ -470,10 +460,12 @@ static int ltc6802_probe(struct spi_device *spi)
 	st->spi = spi;
 	st->info = &ltc6802_chip_info_tbl[spi_get_device_id(spi)->driver_data];
 
+	/* Get serial interface address */
 	ltc6802_addr = of_get_property(st->spi->dev.of_node,
-				       "ltc6802,addr", NULL);
+				       "ltc6802,address", NULL);
 	if (!ltc6802_addr) {
-		pr_err("ltc6802,addr field not present in device node\n");
+		dev_err(&indio_dev->dev,
+			"Failed to get serial interface address\n");
 		return -EINVAL;
 	}
 	st->address = be32_to_cpup(ltc6802_addr);
@@ -486,12 +478,12 @@ static int ltc6802_probe(struct spi_device *spi)
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = st->info->channels;
 	indio_dev->num_channels = st->info->num_channels;
-	/* index 0 is already used by chan_attr_group */
+	/* index 0 is already used by chan_attr_group so use next one */
 	indio_dev->groups[1] = dev_groups[0];
 
 	ret = iio_device_register(indio_dev);
-	if (ret < 0) {
-		dev_err(&indio_dev->dev, "Failed to register iio device\n");
+	if (ret) {
+		dev_err(&indio_dev->dev, "Failed to register IIO device\n");
 		return ret;
 	}
 
@@ -502,7 +494,7 @@ static int ltc6802_remove(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
 
-	pr_info("%s: remove(spi = 0x%p)\n", __func__, spi);
+	dev_info(&spi->dev, "Removing..\n");
 
 	iio_device_unregister(indio_dev);
 
