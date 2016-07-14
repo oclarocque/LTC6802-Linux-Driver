@@ -79,15 +79,15 @@
 #define LTC6802_CHAN(n)   		(n + 1)
 
 enum ltc6802_register_group {
-	LTC6802_CFG,
-	LTC6802_CV,
-	LTC6802_FLG,
-	LTC6802_TMP
+	LTC6802_REG_CFG,
+	LTC6802_REG_CV,
+	LTC6802_REG_FLG,
+	LTC6802_REG_TMP
 };
 
 enum ltc6802_status {
-	LTC6802_PLADC,
-	LTC6802_PLINT
+	LTC6802_STATUS_ADC,
+	LTC6802_STATUS_INT
 };
 
 static ssize_t test = 0;
@@ -224,19 +224,19 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 
 	st->tx_buf[0] = (LTC6802_ADDR_CMD_SOF << 4) | st->address;
 	switch(reg) {
-	case LTC6802_CFG:
+	case LTC6802_REG_CFG:
 		st->tx_buf[1] = LTC6802_CMD_RDCFG;
 		rx_buf_size = 7;
 		break;
-	case LTC6802_CV:
+	case LTC6802_REG_CV:
 		st->tx_buf[1] = LTC6802_CMD_RDCV;
 		rx_buf_size = 19;
 		break;
-	case LTC6802_FLG:
+	case LTC6802_REG_FLG:
 		st->tx_buf[1] = LTC6802_CMD_RDFLG;
 		rx_buf_size = 4;
 		break;
-	case LTC6802_TMP:
+	case LTC6802_REG_TMP:
 		st->tx_buf[1] = LTC6802_CMD_RDTMP;
 		rx_buf_size = 6;
 		break;
@@ -281,7 +281,7 @@ static bool ltc6802_is_standby(struct iio_dev *indio_dev)
 {
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	ltc6802_read_reg_group(indio_dev, LTC6802_CFG, st->rx_buf);
+	ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG, st->rx_buf);
 
 	return ((st->rx_buf[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0);
 }
@@ -303,11 +303,11 @@ static int ltc6802_poll_status(struct iio_dev *indio_dev, int status)
 	};
 
 	switch (status) {
-	case LTC6802_CMD_PLADC:
-		tx_buf[0] = LTC6802_PLADC;
+	case LTC6802_STATUS_ADC:
+		tx_buf[0] = LTC6802_CMD_PLADC;
 		break;
-	case LTC6802_CMD_PLINT:
-		tx_buf[0] = LTC6802_PLINT;
+	case LTC6802_STATUS_INT:
+		tx_buf[0] = LTC6802_CMD_PLINT;
 		break;
 	}
 
@@ -351,11 +351,11 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	switch (chan->type) {
 	case IIO_TEMP:
 		st->tx_buf[0] = LTC6802_CMD_STTMPAD | chan->channel;
-		reg = LTC6802_TMP;
+		reg = LTC6802_REG_TMP;
 		break;
 	case IIO_VOLTAGE:
 		st->tx_buf[0] = LTC6802_CMD_STCVAD | chan->channel;
-		reg = LTC6802_CV;
+		reg = LTC6802_REG_CV;
 		break;
 	default:
 		return -EINVAL;
