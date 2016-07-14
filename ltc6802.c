@@ -74,7 +74,7 @@
 
 #define LTC6802_INPUT_DELTA_MV		6144
 #define LTC6802_ADC_RESOLUTION_BIT	12
-#define LTC6802_ADDR_CMD_SOF		1000
+#define LTC6802_ADDR_CMD_SOF		(1000 << 4)
 #define LTC6802_CDC_MASK		0x07
 #define LTC6802_CHAN(n)   		(n + 1)
 
@@ -174,7 +174,9 @@ struct ltc6802_state {
 	struct spi_device		*spi;
 	struct mutex			lock;
 	unsigned int			address;
-	u8 				tx_buf[7]  ____cacheline_aligned;
+	/* Biggest TX is 8 bytes (when using WRCFG_CMD) */
+	u8 				tx_buf[8]  ____cacheline_aligned;
+	/* Biggest RX is 19 bytes (when using RDCV_CMD) */
 	u8 				rx_buf[19] ____cacheline_aligned;
 };
 
@@ -222,7 +224,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
 		},
 	};
 
-	st->tx_buf[0] = (LTC6802_ADDR_CMD_SOF << 4) | st->address;
+	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
 	switch(reg) {
 	case LTC6802_REG_CFG:
 		st->tx_buf[1] = LTC6802_CMD_RDCFG;
@@ -333,14 +335,15 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 * it needs to be waken up before requesting a conversion.
 	 */
 	if (ltc6802_is_standby(indio_dev)) {
-		st->tx_buf[0] = LTC6802_CMD_WRCFG;
-		st->tx_buf[1] = LTC6802_CFGR0_CDC_MODE1;
-		st->tx_buf[2] = 0x00;
+		st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
+		st->tx_buf[1] = LTC6802_CMD_WRCFG;
+		st->tx_buf[2] = LTC6802_CFGR0_CDC_MODE1;
 		st->tx_buf[3] = 0x00;
 		st->tx_buf[4] = 0x00;
 		st->tx_buf[5] = 0x00;
 		st->tx_buf[6] = 0x00;
-		ret = spi_write(st->spi, &st->tx_buf, 7);
+		st->tx_buf[7] = 0x00;
+		ret = spi_write(st->spi, &st->tx_buf, 8);
 		if (ret) {
 			dev_err(&indio_dev->dev,
 				"Failed to get device out of standby mode\n");
