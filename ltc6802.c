@@ -387,7 +387,6 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 			    struct iio_chan_spec const *chan,
 			    int *val, int *val2, long mask)
 {
-	int ret = 0;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
 	switch (mask) {
@@ -395,26 +394,17 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 		mutex_lock(&st->lock);
 		ret = ltc6802_read_single_value(indio_dev, chan, val);
 		mutex_unlock(&st->lock);
-		break;
+		return ret;
 	case IIO_CHAN_INFO_SCALE:
-		switch (chan->type) {
-		case IIO_TEMP:
-		case IIO_VOLTAGE:
-			*val = LTC6802_INPUT_DELTA_MV;
-			*val2 = LTC6802_ADC_RESOLUTION_BIT;
-			ret = IIO_VAL_FRACTIONAL_LOG2;
-			break;
-		default:
-			ret = -EINVAL;
-			break;
-		}
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
+		if (chan->type != IIO_TEMP && chan->type != IIO_VOLTAGE)
+			return -EINVAL;
 
-	return ret;
+		*val = LTC6802_INPUT_DELTA_MV;
+		*val2 = LTC6802_ADC_RESOLUTION_BIT;
+		return IIO_VAL_FRACTIONAL_LOG2;
+	default:
+		return -EINVAL;
+	}
 }
 
 static const struct iio_info ltc6802_info = {
