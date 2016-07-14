@@ -174,6 +174,7 @@ struct ltc6802_state {
 	struct spi_device		*spi;
 	struct mutex			lock;
 	unsigned int			address;
+	u8				cfg[6];
 	/* Biggest TX is 8 bytes (when using WRCFG_CMD) */
 	u8 				tx_buf[8]  ____cacheline_aligned;
 	/* Biggest RX is 19 bytes (when using RDCV_CMD) */
@@ -331,20 +332,21 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	int reg;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
+	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
+
 	/*
 	 * Device falls into standby mode if no activity is detected on the SCKI
 	 * pin for 2.5 seconds. When in standby mode, the ADC is turned off so
 	 * it needs to be waken up before requesting a conversion.
 	 */
 	if (!!ltc6802_is_standby(indio_dev)) {
-		st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
 		st->tx_buf[1] = LTC6802_CMD_WRCFG;
-		st->tx_buf[2] = LTC6802_CFGR0_CDC_MODE1;
-		st->tx_buf[3] = 0x00;
-		st->tx_buf[4] = 0x00;
-		st->tx_buf[5] = 0x00;
-		st->tx_buf[6] = 0x00;
-		st->tx_buf[7] = 0x00;
+		st->tx_buf[2] = st->cfg[0];
+		st->tx_buf[3] = st->cfg[1];
+		st->tx_buf[4] = st->cfg[2];
+		st->tx_buf[5] = st->cfg[3];
+		st->tx_buf[6] = st->cfg[4];
+		st->tx_buf[7] = st->cfg[5];
 		ret = spi_write(st->spi, &st->tx_buf, 8);
 		if (ret) {
 			dev_err(&indio_dev->dev,
@@ -355,18 +357,18 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 
 	switch (chan->type) {
 	case IIO_TEMP:
-		st->tx_buf[0] = LTC6802_CMD_STTMPAD | chan->channel;
+		st->tx_buf[1] = LTC6802_CMD_STTMPAD | chan->channel;
 		reg = LTC6802_REG_TMP;
 		break;
 	case IIO_VOLTAGE:
-		st->tx_buf[0] = LTC6802_CMD_STCVAD | chan->channel;
+		st->tx_buf[1] = LTC6802_CMD_STCVAD | chan->channel;
 		reg = LTC6802_REG_CV;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	ret = spi_write(st->spi, st->tx_buf, 1);
+	ret = spi_write(st->spi, st->tx_buf, 2);
 	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to request channel conversion\n");
@@ -511,6 +513,13 @@ static int ltc6802_probe(struct spi_device *spi)
 	st = iio_priv(indio_dev);
 	st->spi = spi;
 	st->info = &ltc6802_chip_info_tbl[spi_get_device_id(spi)->driver_data];
+
+	st->cfg[0] = LTC6802_CFGR0_CDC_MODE1;
+	st->cfg[1] = 0x00;
+	st->cfg[2] = 0x00;
+	st->cfg[3] = 0x00;
+	st->cfg[4] = 0x00;
+	st->cfg[5] = 0x00;
 
 	ltc6802_addr = of_get_property(st->spi->dev.of_node,
 				       "ltc6802,address", NULL);
