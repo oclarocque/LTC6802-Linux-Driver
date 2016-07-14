@@ -208,8 +208,7 @@ static u8 ltc6802_pec_calculation(u8 *buf, int size)
 	return pec;
 }
 
-static int ltc6802_read_reg_group(struct iio_dev *indio_dev,
-				  int reg, u8 *rx_buf)
+static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 {
 	int ret;
 	int rx_buf_size;
@@ -283,7 +282,7 @@ static bool ltc6802_is_standby(struct iio_dev *indio_dev)
 {
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG, st->rx_buf);
+	ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
 
 	return ((st->rx_buf[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0);
 }
@@ -380,7 +379,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 */
 	mdelay(10);
 	
-	ret = ltc6802_read_reg_group(indio_dev, reg, st->rx_buf);
+	ret = ltc6802_read_reg_group(indio_dev, reg);
 	if (ret)
 		return ret
 
