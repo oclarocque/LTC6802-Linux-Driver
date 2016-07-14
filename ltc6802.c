@@ -278,11 +278,14 @@ static int ltc6802_extract_chan_value(int channel, u8 *buf)
 	return value;
 }
 
-static bool ltc6802_is_standby(struct iio_dev *indio_dev)
+static int ltc6802_is_standby(struct iio_dev *indio_dev)
 {
+	int ret;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
+	ret = ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
+	if (ret)
+		return ret;
 
 	return ((st->rx_buf[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0);
 }
@@ -333,7 +336,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 * pin for 2.5 seconds. When in standby mode, the ADC is turned off so
 	 * it needs to be waken up before requesting a conversion.
 	 */
-	if (ltc6802_is_standby(indio_dev)) {
+	if (!!ltc6802_is_standby(indio_dev)) {
 		st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
 		st->tx_buf[1] = LTC6802_CMD_WRCFG;
 		st->tx_buf[2] = LTC6802_CFGR0_CDC_MODE1;
