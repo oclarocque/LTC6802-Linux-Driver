@@ -378,6 +378,9 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	mdelay(10);
 	
 	ret = ltc6802_read_reg_group(indio_dev, reg, st->rx_buf);
+	if (ret)
+		return ret
+
 	*val = ltc6802_extract_chan_value(chan->channel, st->rx_buf);
 
 	return IIO_VAL_INT;
@@ -530,7 +533,7 @@ static int ltc6802_probe(struct spi_device *spi)
 		return ret;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int ltc6802_remove(struct spi_device *spi)
