@@ -36,14 +36,14 @@
 #define LTC6802_CFGR0_GPIO1		BIT(5)
 #define LTC6802_CFGR0_LVPL		BIT(4)
 #define LTC6802_CFGR0_CELL10		BIT(3)
-#define LTC6802_CFGR0_CDC_MODE0		0
-#define LTC6802_CFGR0_CDC_MODE1		1
-#define LTC6802_CFGR0_CDC_MODE2		2
-#define LTC6802_CFGR0_CDC_MODE3		3
-#define LTC6802_CFGR0_CDC_MODE4		4
-#define LTC6802_CFGR0_CDC_MODE5		5
-#define LTC6802_CFGR0_CDC_MODE6		6
 #define LTC6802_CFGR0_CDC_MODE7		7
+#define LTC6802_CFGR0_CDC_MODE6		6
+#define LTC6802_CFGR0_CDC_MODE5		5
+#define LTC6802_CFGR0_CDC_MODE4		4
+#define LTC6802_CFGR0_CDC_MODE3		3
+#define LTC6802_CFGR0_CDC_MODE2		2
+#define LTC6802_CFGR0_CDC_MODE1		1
+#define LTC6802_CFGR0_CDC_MODE0		0
 /* Group 1 */
 #define LTC6802_CFGR1_DCC7		BIT(7)
 #define LTC6802_CFGR1_DCC6		BIT(6)
@@ -175,9 +175,9 @@ struct ltc6802_state {
 	struct mutex			lock;
 	unsigned int			address;
 	u8				cfg[6];
-	/* Biggest TX is 8 bytes (when using WRCFG_CMD) */
+	/* Max Rx size is 8 bytes (when using WRCFG_CMD) */
 	u8 				tx_buf[8]  ____cacheline_aligned;
-	/* Biggest RX is 19 bytes (when using RDCV_CMD) */
+	/* Max Tx size is 19 bytes (when using RDCV_CMD) */
 	u8 				rx_buf[19] ____cacheline_aligned;
 };
 
@@ -212,7 +212,7 @@ static u8 ltc6802_pec_calculation(u8 *buf, int size)
 static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 {
 	int ret;
-	int rx_buf_size;
+	int rx_size;
 	u8 pec;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 	struct spi_transfer xfers[] = {
@@ -228,33 +228,33 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 	switch(reg) {
 	case LTC6802_REG_CFG:
 		st->tx_buf[1] = LTC6802_CMD_RDCFG;
-		rx_buf_size = 7;
+		rx_size = 7;
 		break;
 	case LTC6802_REG_CV:
 		st->tx_buf[1] = LTC6802_CMD_RDCV;
-		rx_buf_size = 19;
+		rx_size = 19;
 		break;
 	case LTC6802_REG_FLG:
 		st->tx_buf[1] = LTC6802_CMD_RDFLG;
-		rx_buf_size = 4;
+		rx_size = 4;
 		break;
 	case LTC6802_REG_TMP:
 		st->tx_buf[1] = LTC6802_CMD_RDTMP;
-		rx_buf_size = 6;
+		rx_size = 6;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	xfers[1].len = rx_buf_size;
+	xfers[1].len = rx_size;
 	ret = spi_sync_transfer(st->spi, xfers, ARRAY_SIZE(xfers));
 	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to read register group\n");
 	}
 
-	pec = ltc6802_pec_calculation(st->rx_buf, rx_buf_size);
-	if (pec != st->rx_buf[rx_buf_size - 1]) {
+	pec = ltc6802_pec_calculation(st->rx_buf, rx_size);
+	if (pec != st->rx_buf[rx_size - 1]) {
 		dev_warn(&indio_dev->dev,
 			"PEC error on register group\n");
 	}
