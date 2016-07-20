@@ -337,6 +337,11 @@ static int ltc6802_get_gpio_value(int gpio, u8 *buf)
 	return buf[LTC6802_CFG_REG0] & (1 << (gpio + 4));
 }
 
+static void ltc6802_set_gpio_value(int gpio, u8 *buf)
+{
+	buf[LTC6802_CFG_REG0] &= ~(1 << (gpio + 4));
+}
+
 static int ltc6802_extract_chan_value(int channel, u8 *buf)
 {
 	int value;
