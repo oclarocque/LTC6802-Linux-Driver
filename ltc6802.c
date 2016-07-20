@@ -78,6 +78,9 @@
 #define LTC6802_CDC_MASK		0x07
 #define LTC6802_CHAN(n)   		(n + 1)
 
+#define LTC6802_ATTR_NAME_TO_CELL(name) (((int)name[4] - 0x30) * 10 \
+					 + (int)name[5] - 0x30)
+
 enum ltc6802_register_group {
 	LTC6802_REG_CFG,
 	LTC6802_REG_CV,
@@ -294,6 +297,41 @@ static void ltc6802_set_cfg_value(int set, int reg, int bit, u8 *buf)
 		buf[reg] &= ~bit;
 }
 
+static int ltc6802_get_discharge_value(int cell, u8 *buf)
+{
+	int bit;
+	int reg;
+
+	if (cell < 9) {
+		bit = (cell - 1);
+		reg = LTC6802_CFG_REG1;
+	} else {
+		bit = (cell - 9);
+		reg = LTC6802_CFG_REG2;
+	}
+
+	return buf[reg] | (1 << bit);
+}
+
+static void ltc6802_set_discharge_value(bool set, int cell, u8 *buf)
+{
+	int bit;
+	int reg;
+
+	if (cell < 9) {
+		bit = (cell - 1);
+		reg = LTC6802_CFG_REG1;
+	} else {
+		bit = (cell - 9);
+		reg = LTC6802_CFG_REG2;
+	}
+
+	if (set)
+		buf[reg] |= (1 << bit);
+	else
+		buf[reg] &= ~(1 << bit);
+}
+
 static int ltc6802_extract_chan_value(int channel, u8 *buf)
 {
 	int value;
@@ -458,36 +496,78 @@ static const struct iio_info ltc6802_info = {
 static ssize_t digital_io_show(struct device *dev,
                                struct device_attribute *attr, char *buf)
 {
-	pr_info("%s\n", attr->attr.name);
+	int ret;
+	int cell;
+	int value;
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	return sprintf(buf, "%d\n", test);
+	ret = ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
+	if (ret)
+		return ret;
+
+	cell = LTC6802_ATTR_NAME_TO_CELL(attr->attr.name);
+	value = ltc6802_get_discharge_value(cell, st->cfg);
+
+	//pr_info("%d\n", );
+
+	return sprintf(buf, "%d\n", value);
 }
 static ssize_t digital_io_store(struct device *dev,
                                 struct device_attribute *attr, const char *buf,
                                 size_t count)
 {
-	pr_info("%s\n", attr->attr.name);
-	sscanf(buf, "%d\n", &test);
+	int ret;
+	int cell;
+	int value;
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct ltc6802_state *st = iio_priv(indio_dev);
+
+	sscanf(buf, "%d\n", &value);
+
+	pr_info("value: %d\n", value);
+
+	ret = ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
+	if (ret)
+		return ret;
+
+	cell = LTC6802_ATTR_NAME_TO_CELL(attr->attr.name);
+	ltc6802_set_discharge_value(value, cell, st->cfg);
+	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
+	st->tx_buf[1] = LTC6802_CMD_WRCFG;
+	st->tx_buf[2] = LTC6802_CFGR0_CDC_MODE1;
+	st->tx_buf[3] = st->cfg[1];
+	st->tx_buf[4] = st->cfg[2];
+	st->tx_buf[5] = st->cfg[3];
+	st->tx_buf[6] = st->cfg[4];
+	st->tx_buf[7] = st->cfg[5];
+	ret = spi_write(st->spi, &st->tx_buf, 8);
+	if (ret) {
+		dev_err(&indio_dev->dev,
+			"Failed to set discharge state\n");
+		return ret;
+	}
+
 	return count;
 }
 
-static DEVICE_ATTR(cell1_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell01_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell2_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell02_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell3_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell03_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell4_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell04_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell5_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell05_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell6_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell06_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell7_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell07_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell8_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell08_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell9_bypass,  S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(cell09_bypass,  S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
 static DEVICE_ATTR(cell10_bypass, S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
@@ -507,15 +587,15 @@ static DEVICE_ATTR(gpio2_direction, S_IWUSR | S_IRUGO,
 		   digital_io_show, digital_io_store);
 
 static struct attribute *dev_attrs[] = {
-	&dev_attr_cell1_bypass.attr,
-	&dev_attr_cell2_bypass.attr,
-	&dev_attr_cell3_bypass.attr,
-	&dev_attr_cell4_bypass.attr,
-	&dev_attr_cell5_bypass.attr,
-	&dev_attr_cell6_bypass.attr,
-	&dev_attr_cell7_bypass.attr,
-	&dev_attr_cell8_bypass.attr,
-	&dev_attr_cell9_bypass.attr,
+	&dev_attr_cell01_bypass.attr,
+	&dev_attr_cell02_bypass.attr,
+	&dev_attr_cell03_bypass.attr,
+	&dev_attr_cell04_bypass.attr,
+	&dev_attr_cell05_bypass.attr,
+	&dev_attr_cell06_bypass.attr,
+	&dev_attr_cell07_bypass.attr,
+	&dev_attr_cell08_bypass.attr,
+	&dev_attr_cell09_bypass.attr,
 	&dev_attr_cell10_bypass.attr,
 	&dev_attr_cell11_bypass.attr,
 	&dev_attr_cell12_bypass.attr,
