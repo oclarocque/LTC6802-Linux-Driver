@@ -376,7 +376,7 @@ static int ltc6802_write_cfg(struct iio_dev *indio_dev)
 	st->tx_buf[7] = st->cfg[5];
 	ret = spi_write(st->spi, &st->tx_buf, 8);
 	if (ret)
-		dev_err(&indio_dev->dev, "Failed to get write configuraton\n");
+		dev_err(&indio_dev->dev, "Failed to write configuration\n");
 
 	return ret;
 }
@@ -513,8 +513,8 @@ static const struct iio_info ltc6802_info = {
 	.read_raw = &ltc6802_read_raw,
 };
 
-static ssize_t digital_io_show(struct device *dev,
-                               struct device_attribute *attr, char *buf)
+static ssize_t ltc6802_pin_show(struct device *dev,
+                                struct device_attribute *attr, char *buf)
 {
 	int ret;
 	int id;
@@ -528,16 +528,17 @@ static ssize_t digital_io_show(struct device *dev,
 		return ret;
 
 	id = LTC6802_ATTR_NAME_TO_ID(name);
-	if (strstr(name, "cell_bypass"))
-		value = ltc6802_get_discharge_value(id, st->cfg);
-	else
+	if (strstr(name, "gpio"))
 		value = ltc6802_get_gpio_value(id, st->cfg);
+	else
+		value = ltc6802_get_discharge_value(id, st->cfg);
 
 	return sprintf(buf, "%d\n", value);
 }
-static ssize_t digital_io_store(struct device *dev,
-                                struct device_attribute *attr, const char *buf,
-                                size_t count)
+
+static ssize_t ltc6802_pin_store(struct device *dev,
+                                 struct device_attribute *attr, const char *buf,
+                                 size_t count)
 {
 	int id;
 	int value;
@@ -550,10 +551,10 @@ static ssize_t digital_io_store(struct device *dev,
 	if (!!ltc6802_is_standby(indio_dev)) {
 		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
 		id = LTC6802_ATTR_NAME_TO_ID(attr->attr.name);
-		if (strstr(name, "cell_bypass"))
-			ltc6802_set_discharge_value(value, id, st->cfg);
-		else
+		if (strstr(name, "gpio"))
 			ltc6802_set_gpio_value(value, id, st->cfg);
+		else
+			ltc6802_set_discharge_value(value, id, st->cfg);
 
 		ltc6802_write_cfg(indio_dev);
 	}
@@ -561,51 +562,51 @@ static ssize_t digital_io_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(cell01_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell02_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell03_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell04_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell05_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell06_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell07_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell08_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell09_bypass,  S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell10_bypass, S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell11_bypass, S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(cell12_bypass, S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(cell01_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell02_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell03_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell04_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell05_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell06_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell07_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell08_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell09_disch,  S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell10_disch, S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell11_disch, S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(cell12_disch, S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
 
-static DEVICE_ATTR(gpio01_value, S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
-static DEVICE_ATTR(gpio02_value, S_IWUSR | S_IRUGO,
-		   digital_io_show, digital_io_store);
+static DEVICE_ATTR(gpio01_pinctrl, S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
+static DEVICE_ATTR(gpio02_pinctrl, S_IWUSR | S_IRUGO,
+		   ltc6802_pin_show, ltc6802_pin_store);
 
 static struct attribute *dev_attrs[] = {
-	&dev_attr_cell01_bypass.attr,
-	&dev_attr_cell02_bypass.attr,
-	&dev_attr_cell03_bypass.attr,
-	&dev_attr_cell04_bypass.attr,
-	&dev_attr_cell05_bypass.attr,
-	&dev_attr_cell06_bypass.attr,
-	&dev_attr_cell07_bypass.attr,
-	&dev_attr_cell08_bypass.attr,
-	&dev_attr_cell09_bypass.attr,
-	&dev_attr_cell10_bypass.attr,
-	&dev_attr_cell11_bypass.attr,
-	&dev_attr_cell12_bypass.attr,
-	&dev_attr_gpio01_value.attr,
-	&dev_attr_gpio02_value.attr,
+	&dev_attr_cell01_disch.attr,
+	&dev_attr_cell02_disch.attr,
+	&dev_attr_cell03_disch.attr,
+	&dev_attr_cell04_disch.attr,
+	&dev_attr_cell05_disch.attr,
+	&dev_attr_cell06_disch.attr,
+	&dev_attr_cell07_disch.attr,
+	&dev_attr_cell08_disch.attr,
+	&dev_attr_cell09_disch.attr,
+	&dev_attr_cell10_disch.attr,
+	&dev_attr_cell11_disch.attr,
+	&dev_attr_cell12_disch.attr,
+	&dev_attr_gpio01_pinctrl.attr,
+	&dev_attr_gpio02_pinctrl.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(dev);
