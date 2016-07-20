@@ -268,6 +268,16 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 			"PEC error on register group\n");
 	}
 
+	/* Save cfg registers value */
+	if (reg == LTC6802_REG_CFG) {
+		st->cfg[0] = st->rx_buf[0];
+		st->cfg[1] = st->rx_buf[1];
+		st->cfg[2] = st->rx_buf[2];
+		st->cfg[3] = st->rx_buf[3];
+		st->cfg[4] = st->rx_buf[4];
+		st->cfg[5] = st->rx_buf[5];
+	}
+
 	return ret;
 }
 
@@ -449,6 +459,7 @@ static ssize_t digital_io_show(struct device *dev,
                                struct device_attribute *attr, char *buf)
 {
 	pr_info("%s\n", attr->attr.name);
+
 	return sprintf(buf, "%d\n", test);
 }
 static ssize_t digital_io_store(struct device *dev,
