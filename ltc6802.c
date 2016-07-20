@@ -349,6 +349,26 @@ static int ltc6802_extract_chan_value(int channel, u8 *buf)
 	return value;
 }
 
+static int ltc6802_write_cfg(struct iio_dev *indio_dev)
+{
+	int ret;
+	struct ltc6802_state *st = iio_priv(indio_dev);
+
+	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
+	st->tx_buf[1] = LTC6802_CMD_WRCFG;
+	st->tx_buf[2] = st->cfg[0];
+	st->tx_buf[3] = st->cfg[1];
+	st->tx_buf[4] = st->cfg[2];
+	st->tx_buf[5] = st->cfg[3];
+	st->tx_buf[6] = st->cfg[4];
+	st->tx_buf[7] = st->cfg[5];
+	ret = spi_write(st->spi, &st->tx_buf, 8);
+	if (ret)
+		dev_err(&indio_dev->dev, "Failed to get write configuraton\n");
+
+	return ret;
+}
+
 static int ltc6802_is_standby(struct iio_dev *indio_dev)
 {
 	int ret;
@@ -402,29 +422,17 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	int reg;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
-
 	/*
 	 * Device falls into standby mode if no activity is detected on the SCKI
 	 * pin for 2.5 seconds. When in standby mode, the ADC is turned off so
 	 * it needs to be waken up before requesting a conversion.
 	 */
 	if (!!ltc6802_is_standby(indio_dev)) {
-		st->tx_buf[1] = LTC6802_CMD_WRCFG;
-		st->tx_buf[2] = st->cfg[0];
-		st->tx_buf[3] = st->cfg[1];
-		st->tx_buf[4] = st->cfg[2];
-		st->tx_buf[5] = st->cfg[3];
-		st->tx_buf[6] = st->cfg[4];
-		st->tx_buf[7] = st->cfg[5];
-		ret = spi_write(st->spi, &st->tx_buf, 8);
-		if (ret) {
-			dev_err(&indio_dev->dev,
-				"Failed to get device out of standby mode\n");
-			return ret;
-		}
+		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
+		ltc6802_write_cfg(indio_dev);
 	}
 
+	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
 	switch (chan->type) {
 	case IIO_TEMP:
 		st->tx_buf[1] = LTC6802_CMD_STTMPAD | chan->channel;
@@ -527,25 +535,11 @@ static ssize_t digital_io_store(struct device *dev,
 
 	pr_info("value: %d\n", value);
 
-	ret = ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
-	if (ret)
-		return ret;
-
-	cell = LTC6802_ATTR_NAME_TO_CELL(attr->attr.name);
-	ltc6802_set_discharge_value(value, cell, st->cfg);
-	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
-	st->tx_buf[1] = LTC6802_CMD_WRCFG;
-	st->tx_buf[2] = LTC6802_CFGR0_CDC_MODE1;
-	st->tx_buf[3] = st->cfg[1];
-	st->tx_buf[4] = st->cfg[2];
-	st->tx_buf[5] = st->cfg[3];
-	st->tx_buf[6] = st->cfg[4];
-	st->tx_buf[7] = st->cfg[5];
-	ret = spi_write(st->spi, &st->tx_buf, 8);
-	if (ret) {
-		dev_err(&indio_dev->dev,
-			"Failed to set discharge state\n");
-		return ret;
+	if (!!ltc6802_is_standby(indio_dev)) {
+		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
+		cell = LTC6802_ATTR_NAME_TO_CELL(attr->attr.name);
+		ltc6802_set_discharge_value(value, cell, st->cfg);
+		ltc6802_write_cfg(indio_dev);
 	}
 
 	return count;
@@ -627,13 +621,6 @@ static int ltc6802_probe(struct spi_device *spi)
 	st = iio_priv(indio_dev);
 	st->spi = spi;
 	st->info = &ltc6802_chip_info_tbl[spi_get_device_id(spi)->driver_data];
-
-	st->cfg[0] = LTC6802_CFGR0_CDC_MODE1;
-	st->cfg[1] = 0x00;
-	st->cfg[2] = 0x00;
-	st->cfg[3] = 0x00;
-	st->cfg[4] = 0x00;
-	st->cfg[5] = 0x00;
 
 	ltc6802_addr = of_get_property(st->spi->dev.of_node,
 				       "ltc6802,address", NULL);
