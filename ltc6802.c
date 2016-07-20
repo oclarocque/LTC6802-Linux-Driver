@@ -386,7 +386,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	
 	ret = ltc6802_read_reg_group(indio_dev, reg);
 	if (ret)
-		return ret
+		return ret;
 
 	*val = ltc6802_extract_chan_value(chan->channel, st->rx_buf);
 
@@ -397,6 +397,7 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 			    struct iio_chan_spec const *chan,
 			    int *val, int *val2, long mask)
 {
+	int ret;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
 	switch (mask) {
