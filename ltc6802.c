@@ -30,7 +30,7 @@
 #define LTC6802_CMD_STOWDC		0x70
 
 /* LTC6802 Configuration Register Groups */
-/* Group 0 */
+/* Register 0 */
 #define LTC6802_CFGR0_WDT		BIT(7)
 #define LTC6802_CFGR0_GPIO2		BIT(6)
 #define LTC6802_CFGR0_GPIO1		BIT(5)
@@ -44,7 +44,7 @@
 #define LTC6802_CFGR0_CDC_MODE2		2
 #define LTC6802_CFGR0_CDC_MODE1		1
 #define LTC6802_CFGR0_CDC_MODE0		0
-/* Group 1 */
+/* Register 1 */
 #define LTC6802_CFGR1_DCC7		BIT(7)
 #define LTC6802_CFGR1_DCC6		BIT(6)
 #define LTC6802_CFGR1_DCC5		BIT(5)
@@ -53,7 +53,7 @@
 #define LTC6802_CFGR1_DCC2		BIT(2)
 #define LTC6802_CFGR1_DCC1		BIT(1)
 #define LTC6802_CFGR1_DCC0		BIT(0)
-/* Group 2 */
+/* Register 2 */
 #define LTC6802_CFGR2_MC4I		BIT(7)
 #define LTC6802_CFGR2_MC3I		BIT(6)
 #define LTC6802_CFGR2_MC2I		BIT(5)
@@ -62,7 +62,7 @@
 #define LTC6802_CFGR2_DCC11		BIT(2)
 #define LTC6802_CFGR2_DCC10		BIT(1)
 #define LTC6802_CFGR2_DCC9		BIT(0)
-/* Group 3 */
+/* Register 3 */
 #define LTC6802_CFGR3_MC12I		BIT(7)
 #define LTC6802_CFGR3_MC11I		BIT(6)
 #define LTC6802_CFGR3_MC10I		BIT(5)
@@ -83,6 +83,15 @@ enum ltc6802_register_group {
 	LTC6802_REG_CV,
 	LTC6802_REG_FLG,
 	LTC6802_REG_TMP
+};
+
+enum ltc6802_cfg_register {
+	LTC6802_CFG_REG0,
+	LTC6802_CFG_REG1,
+	LTC6802_CFG_REG2,
+	LTC6802_CFG_REG3,
+	LTC6802_CFG_REG4,
+	LTC6802_CFG_REG5,
 };
 
 enum ltc6802_status {
@@ -260,6 +269,19 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 	}
 
 	return ret;
+}
+
+static int ltc6802_get_cfg_value(int reg, int bit, u8 *buf)
+{
+	return buf[reg] & bit;
+}
+
+static void ltc6802_set_cfg_value(int set, int reg, int bit, u8 *buf)
+{
+	if (set)
+		buf[reg] |= bit;
+	else
+		buf[reg] &= ~bit;
 }
 
 static int ltc6802_extract_chan_value(int channel, u8 *buf)
