@@ -332,7 +332,7 @@ static void ltc6802_set_discharge_value(bool set, int cell, u8 *buf)
 		buf[reg] &= ~(1 << bit);
 }
 
-static void ltc6802_get_gpio_value(int gpio, u8 *buf)
+static int ltc6802_get_gpio_value(int gpio, u8 *buf)
 {
 	return buf[LTC6802_CFG_REG0] & (1 << (gpio + 4));
 }
@@ -530,7 +530,6 @@ static ssize_t digital_io_store(struct device *dev,
                                 struct device_attribute *attr, const char *buf,
                                 size_t count)
 {
-	int ret;
 	int cell;
 	int value;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
