@@ -79,7 +79,7 @@
 #define LTC6802_CHAN(n)   		(n + 1)
 
 #define LTC6802_ATTR_NAME_TO_ID(name) (((int)name[4] - 0x30) * 10 \
-					+ (int)name[5] - 0x30)
+				      + (int)name[5] - 0x30)
 
 enum ltc6802_register_group {
 	LTC6802_REG_CFG,
@@ -352,7 +352,6 @@ static int ltc6802_extract_chan_value(int channel, u8 *buf)
 	if (channel % 2) {
 		index = (channel - 1) + ((channel - 1) / 2);
 		value = ((buf[index + 1] & 0x0F) << 8) | buf[index];
-
 	} else {
 		index = channel + (channel / 2) - 1;
 		value = (buf[index] << 4) | ((buf[index - 1] & 0xF0) >> 4);
@@ -555,7 +554,6 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 			ltc6802_set_gpio_value(value, id, st->cfg);
 		else
 			ltc6802_set_discharge_value(value, id, st->cfg);
-
 		ltc6802_write_cfg(indio_dev);
 	}
 
