@@ -480,7 +480,9 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
+	mutex_lock(&st->lock);
 	ret = ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
+	mutex_unlock(&st->lock);
 	if (ret)
 		return ret;
 
@@ -505,6 +507,7 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 
 	sscanf(buf, "%d\n", &value);
 
+	mutex_lock(&st->lock);
 	if (!!ltc6802_is_standby(indio_dev)) {
 		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
 		id = LTC6802_ATTR_NAME_TO_ID(attr->attr.name);
@@ -514,6 +517,7 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 			ltc6802_set_discharge_value(value, id, st->cfg);
 		ltc6802_write_cfg(indio_dev);
 	}
+	mutex_lock(&st->lock);
 
 	return count;
 }
