@@ -266,12 +266,14 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to read register group\n");
+		return ret;
 	}
 
 	pec = ltc6802_pec_calculation(st->rx_buf, rx_size);
 	if (pec != st->rx_buf[rx_size - 1]) {
-		dev_warn(&indio_dev->dev,
+		dev_err(&indio_dev->dev,
 			"PEC error on register group\n");
+		return -EINVAL;
 	}
 
 	/* Save cfg registers value */
@@ -284,7 +286,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 		st->cfg[5] = st->rx_buf[5];
 	}
 
-	return ret;
+	return 0;
 }
 
 static int ltc6802_get_discharge_value(int cell, u8 *buf)
@@ -338,18 +340,18 @@ static void ltc6802_set_gpio_value(bool set, int gpio, u8 *buf)
 
 static int ltc6802_get_chan_value(int channel, u8 *buf)
 {
-	int value;
-	int index;
+	int idx;
+	int val;
 
 	if (channel % 2) {
-		index = (channel - 1) + ((channel - 1) / 2);
-		value = ((buf[index + 1] & 0x0F) << 8) | buf[index];
+		idx = (channel - 1) + ((channel - 1) / 2);
+		val = ((buf[idx + 1] & 0x0F) << 8) | buf[idx];
 	} else {
-		index = channel + (channel / 2) - 1;
-		value = (buf[index] << 4) | ((buf[index - 1] & 0xF0) >> 4);
+		idx = channel + (channel / 2) - 1;
+		val = (buf[idx] << 4) | ((buf[idx - 1] & 0xF0) >> 4);
 	}
 
-	return value;
+	return val;
 }
 
 static int ltc6802_write_cfg(struct iio_dev *indio_dev)
@@ -419,6 +421,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to request channel conversion\n");
+		return ret;
 	}
 
 	/*
@@ -475,7 +478,7 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 {
 	int ret;
 	int id;
-	int value;
+	int val;
 	const char *name = attr->attr.name;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
@@ -488,11 +491,11 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 
 	id = LTC6802_ATTR_NAME_TO_ID(name);
 	if (strstr(name, "gpio"))
-		value = ltc6802_get_gpio_value(id, st->cfg);
+		val = ltc6802_get_gpio_value(id, st->cfg);
 	else
-		value = ltc6802_get_discharge_value(id, st->cfg);
+		val = ltc6802_get_discharge_value(id, st->cfg);
 
-	return sprintf(buf, "%d\n", value);
+	return sprintf(buf, "%d\n", val);
 }
 
 static ssize_t ltc6802_pin_store(struct device *dev,
@@ -500,21 +503,21 @@ static ssize_t ltc6802_pin_store(struct device *dev,
                                  size_t count)
 {
 	int id;
-	int value;
+	int val;
 	const char *name = attr->attr.name;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	sscanf(buf, "%d\n", &value);
+	sscanf(buf, "%d\n", &val);
 
 	mutex_lock(&st->lock);
 	if (!!ltc6802_is_standby(indio_dev)) {
 		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
 		id = LTC6802_ATTR_NAME_TO_ID(attr->attr.name);
 		if (strstr(name, "gpio"))
-			ltc6802_set_gpio_value(value, id, st->cfg);
+			ltc6802_set_gpio_value(val, id, st->cfg);
 		else
-			ltc6802_set_discharge_value(value, id, st->cfg);
+			ltc6802_set_discharge_value(val, id, st->cfg);
 		ltc6802_write_cfg(indio_dev);
 	}
 	mutex_lock(&st->lock);
