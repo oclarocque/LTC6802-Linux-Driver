@@ -108,11 +108,13 @@ enum ltc6802_status {
 };
 
 enum ltc6802_id {
-	ltc6802
+	ltc6802,
+	ltc6803,
 };
 
 static const struct spi_device_id ltc6802_id[] = {
 	{"ltc6802", ltc6802},
+	{"ltc6803", ltc6803},
 	{}
 };
 MODULE_DEVICE_TABLE(spi, ltc6802_id);
@@ -120,6 +122,7 @@ MODULE_DEVICE_TABLE(spi, ltc6802_id);
 #ifdef CONFIG_OF
 static const struct of_device_id ltc6802_adc_dt_ids[] = {
 	{ .compatible = "ltc,ltc6802" },
+	{ .compatible = "ltc,ltc6803" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
@@ -179,6 +182,10 @@ struct ltc6802_chip_info {
 
 static const struct ltc6802_chip_info ltc6802_chip_info_tbl[] = {
 	[ltc6802] = {
+		.channels = ltc6802_channels,
+		.num_channels = ARRAY_SIZE(ltc6802_channels),
+	},
+	[ltc6803] = {
 		.channels = ltc6802_channels,
 		.num_channels = ARRAY_SIZE(ltc6802_channels),
 	},
@@ -633,5 +640,5 @@ static struct spi_driver ltc6802_driver = {
 module_spi_driver(ltc6802_driver);
 
 MODULE_AUTHOR("Olivier C. Larocque <olivier.c.larocque@gmail.com>");
-MODULE_DESCRIPTION("LTC6802 Battery Stack Monitor");
+MODULE_DESCRIPTION("LTC6802/3 Multicell Battery Stack Monitor");
 MODULE_LICENSE("GPL v2");
