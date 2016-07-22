@@ -287,19 +287,6 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 	return ret;
 }
 
-static int ltc6802_get_cfg_value(int reg, int bit, u8 *buf)
-{
-	return buf[reg] & bit;
-}
-
-static void ltc6802_set_cfg_value(int set, int reg, int bit, u8 *buf)
-{
-	if (set)
-		buf[reg] |= bit;
-	else
-		buf[reg] &= ~bit;
-}
-
 static int ltc6802_get_discharge_value(int cell, u8 *buf)
 {
 	int bit;
@@ -349,7 +336,7 @@ static void ltc6802_set_gpio_value(bool set, int gpio, u8 *buf)
 
 }
 
-static int ltc6802_extract_chan_value(int channel, u8 *buf)
+static int ltc6802_get_chan_value(int channel, u8 *buf)
 {
 	int value;
 	int index;
@@ -395,40 +382,6 @@ static int ltc6802_is_standby(struct iio_dev *indio_dev)
 		return ret;
 
 	return ((st->rx_buf[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0);
-}
-
-static int ltc6802_poll_status(struct iio_dev *indio_dev, int status)
-{
-	u8 tx_buf[1];
-	u8 rx_buf[1];
-	int ret;
-	struct ltc6802_state *st = iio_priv(indio_dev);
-	struct spi_transfer xfers[] = {
-		{
-		       .tx_buf = tx_buf,
-		       .len = 1,
-		}, {
-		       .rx_buf = rx_buf,
-		       .len = 1,
-		},
-	};
-
-	switch (status) {
-	case LTC6802_STATUS_ADC:
-		tx_buf[0] = LTC6802_CMD_PLADC;
-		break;
-	case LTC6802_STATUS_INT:
-		tx_buf[0] = LTC6802_CMD_PLINT;
-		break;
-	}
-
-	ret = spi_sync_transfer(st->spi, xfers, ARRAY_SIZE(xfers));
-	if (ret) {
-		dev_err(&indio_dev->dev,
-			"Failed to get requested status\n");
-	}
-
-	return ret;
 }
 
 static int ltc6802_read_single_value(struct iio_dev *indio_dev,
@@ -482,7 +435,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	if (ret)
 		return ret;
 
-	*val = ltc6802_extract_chan_value(chan->channel, st->rx_buf);
+	*val = ltc6802_get_chan_value(chan->channel, st->rx_buf);
 
 	return IIO_VAL_INT;
 }
@@ -638,7 +591,7 @@ static int ltc6802_probe(struct spi_device *spi)
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = st->info->channels;
 	indio_dev->num_channels = st->info->num_channels;
-	/* index 0 is already used by chan_attr_group so use next one */
+	/* Index 0 is already used by chan_attr_group so use next one */
 	indio_dev->groups[1] = dev_groups[0];
 
 	ret = iio_device_register(indio_dev);
