@@ -380,7 +380,7 @@ static int ltc6802_write_cfg(struct iio_dev *indio_dev)
 	return ret;
 }
 
-static int ltc6802_is_standby(struct iio_dev *indio_dev)
+static int ltc6802_wakeup(struct iio_dev *indio_dev)
 {
 	int ret;
 	struct ltc6802_state *st = iio_priv(indio_dev);
@@ -389,7 +389,14 @@ static int ltc6802_is_standby(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	return ((st->rx_buf[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0);
+	if ((st->st->cfg[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0) {
+		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
+		ret = ltc6802_write_cfg(indio_dev);
+		if (ret)
+			return ret;
+	}
+
+	return ret;
 }
 
 static int ltc6802_read_single_value(struct iio_dev *indio_dev,
@@ -404,15 +411,11 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 * pin for 2.5 seconds. When in standby mode, the ADC is turned off so
 	 * it needs to be waken up before requesting a conversion.
 	 */
-	ret = ltc6802_is_standby(indio_dev);
-	if (ret < 0) {
-		dev_err(&indio_dev->dev,
-			"Failed to request standby state\n");
-		return ret;
-	}
+	ret = ltc6802_wakeup(indio_dev);
 	if (ret) {
-		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
-		ltc6802_write_cfg(indio_dev);
+		dev_err(&indio_dev->dev,
+			"Failed to request device wakeup\n");
+		return ret;
 	}
 
 	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
@@ -525,21 +528,21 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 	sscanf(buf, "%d\n", &val);
 
 	mutex_lock(&indio_dev->mlock);
-	ret = ltc6802_is_standby(indio_dev);
-	if (ret < 0) {
+	ret = ltc6802_wakeup(indio_dev);
+	if (ret) {
+		mutex_unlock(&indio_dev->mlock);
 		dev_err(&indio_dev->dev,
-			"Failed to request standby state\n");
+			"Failed to request device wakeup\n");
 		return ret;
 	}
-	if (ret) {
-		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
-		id = LTC6802_ATTR_NAME_TO_ID(attr->attr.name);
-		if (strstr(name, "gpio"))
-			ltc6802_set_gpio_value(val, id, st->cfg);
-		else
-			ltc6802_set_discharge_value(val, id, st->cfg);
-		ltc6802_write_cfg(indio_dev);
-	}
+
+	id = LTC6802_ATTR_NAME_TO_ID(name);
+	if (strstr(name, "gpio"))
+		ltc6802_set_gpio_value(val, id, st->cfg);
+	else
+		ltc6802_set_discharge_value(val, id, st->cfg);
+
+	ltc6802_write_cfg(indio_dev);
 	mutex_unlock(&indio_dev->mlock);
 
 	return count;
