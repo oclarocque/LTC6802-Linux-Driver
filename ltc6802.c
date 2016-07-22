@@ -309,7 +309,7 @@ static int ltc6802_get_discharge_value(int cell, u8 *buf)
 		reg = LTC6802_CFG_REG2;
 	}
 
-	return buf[reg] | (1 << bit);
+	return buf[reg] & (1 << bit);
 }
 
 static void ltc6802_set_discharge_value(bool set, int cell, u8 *buf)
@@ -405,7 +405,13 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 * pin for 2.5 seconds. When in standby mode, the ADC is turned off so
 	 * it needs to be waken up before requesting a conversion.
 	 */
-	if (!!ltc6802_is_standby(indio_dev)) {
+	ret = ltc6802_is_standby(indio_dev);
+	if (ret < 0) {
+		dev_err(&indio_dev->dev,
+			"Failed to request standby state\n");
+		return ret;
+	}
+	if (ret) {
 		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
 		ltc6802_write_cfg(indio_dev);
 	}
@@ -511,6 +517,7 @@ static ssize_t ltc6802_pin_store(struct device *dev,
                                  struct device_attribute *attr, const char *buf,
                                  size_t count)
 {
+	int ret;
 	int id;
 	int val;
 	const char *name = attr->attr.name;
@@ -520,7 +527,13 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 	sscanf(buf, "%d\n", &val);
 
 	mutex_lock(&st->lock);
-	if (!!ltc6802_is_standby(indio_dev)) {
+	ret = ltc6802_is_standby(indio_dev);
+	if (ret < 0) {
+		dev_err(&indio_dev->dev,
+			"Failed to request standby state\n");
+		return ret;
+	}
+	if (ret) {
 		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
 		id = LTC6802_ATTR_NAME_TO_ID(attr->attr.name);
 		if (strstr(name, "gpio"))
@@ -529,7 +542,7 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 			ltc6802_set_discharge_value(val, id, st->cfg);
 		ltc6802_write_cfg(indio_dev);
 	}
-	mutex_lock(&st->lock);
+	mutex_unlock(&st->lock);
 
 	return count;
 }
