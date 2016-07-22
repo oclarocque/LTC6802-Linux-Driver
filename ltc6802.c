@@ -492,15 +492,17 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 
 	mutex_lock(&st->lock);
 	ret = ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
-	mutex_unlock(&st->lock);
-	if (ret)
+	if (ret) {
+		mutex_unlock(&st->lock);
 		return ret;
+	}
 
 	id = LTC6802_ATTR_NAME_TO_ID(name);
 	if (strstr(name, "gpio"))
 		val = ltc6802_get_gpio_value(id, st->cfg);
 	else
 		val = ltc6802_get_discharge_value(id, st->cfg);
+	mutex_unlock(&st->lock);
 
 	return sprintf(buf, "%d\n", val);
 }
