@@ -78,8 +78,13 @@
 #define LTC6802_CDC_MASK		0x07
 #define LTC6802_CHAN(n)   		(n + 1)
 
-#define LTC6802_ATTR_NAME_TO_ID(name) (((int)name[4] - 0x30) * 10 \
-				      + (int)name[5] - 0x30)
+#define LTC6802_ATTR_NAME_TO_ID(name) 	(((int)name[4] - 0x30) * 10 	\
+					+ (int)name[5] - 0x30)
+
+#define LTC6802_DEVICE_ATTR(name)	DEVICE_ATTR(name,		\
+						    S_IWUSR | S_IRUGO,	\
+						    ltc6802_pin_show,	\
+						    ltc6802_pin_store);
 
 enum ltc6802_register_group {
 	LTC6802_REG_CFG,
@@ -560,35 +565,21 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(cell01_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell02_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell03_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell04_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell05_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell06_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell07_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell08_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell09_disch,  S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell10_disch, S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell11_disch, S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(cell12_disch, S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
+static LTC6802_DEVICE_ATTR(cell01_disch);
+static LTC6802_DEVICE_ATTR(cell02_disch);
+static LTC6802_DEVICE_ATTR(cell03_disch);
+static LTC6802_DEVICE_ATTR(cell04_disch);
+static LTC6802_DEVICE_ATTR(cell05_disch);
+static LTC6802_DEVICE_ATTR(cell06_disch);
+static LTC6802_DEVICE_ATTR(cell07_disch);
+static LTC6802_DEVICE_ATTR(cell08_disch);
+static LTC6802_DEVICE_ATTR(cell09_disch);
+static LTC6802_DEVICE_ATTR(cell10_disch);
+static LTC6802_DEVICE_ATTR(cell11_disch);
+static LTC6802_DEVICE_ATTR(cell12_disch);
 
-static DEVICE_ATTR(gpio01_pinctrl, S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
-static DEVICE_ATTR(gpio02_pinctrl, S_IWUSR | S_IRUGO,
-		   ltc6802_pin_show, ltc6802_pin_store);
+static LTC6802_DEVICE_ATTR(gpio01_pinctrl);
+static LTC6802_DEVICE_ATTR(gpio02_pinctrl);
 
 static struct attribute *dev_attrs[] = {
 	&dev_attr_cell01_disch.attr,
