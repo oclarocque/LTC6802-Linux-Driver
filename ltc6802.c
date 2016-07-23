@@ -329,7 +329,7 @@ static void ltc6802_set_discharge_value(bool set, int cell, u8 *buf)
 
 static int ltc6802_get_gpio_value(int gpio, u8 *buf)
 {
-	return buf[LTC6802_CFG_REG0] & (1 << (gpio + 4));
+	return !!(buf[LTC6802_CFG_REG0] & (1 << (gpio + 4)));
 }
 
 static void ltc6802_set_gpio_value(bool set, int gpio, u8 *buf)
