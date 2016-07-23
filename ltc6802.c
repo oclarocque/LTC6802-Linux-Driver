@@ -269,16 +269,13 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 
 	xfers[1].len = rx_size;
 	ret = spi_sync_transfer(st->spi, xfers, ARRAY_SIZE(xfers));
-	if (ret) {
-		dev_err(&indio_dev->dev,
-			"Failed to read register group\n");
+	if (ret)
 		return ret;
-	}
 
 	pec = ltc6802_pec_calculation(st->rx_buf, rx_size);
 	if (pec != st->rx_buf[rx_size - 1]) {
 		dev_err(&indio_dev->dev,
-			"PEC error on register group\n");
+			"CRC error\n");
 		return -EINVAL;
 	}
 
@@ -362,7 +359,6 @@ static int ltc6802_get_chan_value(int channel, u8 *buf)
 
 static int ltc6802_write_cfg(struct iio_dev *indio_dev)
 {
-	int ret;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
 	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
@@ -373,11 +369,8 @@ static int ltc6802_write_cfg(struct iio_dev *indio_dev)
 	st->tx_buf[5] = st->cfg[3];
 	st->tx_buf[6] = st->cfg[4];
 	st->tx_buf[7] = st->cfg[5];
-	ret = spi_write(st->spi, &st->tx_buf, 8);
-	if (ret)
-		dev_err(&indio_dev->dev, "Failed to write configuration\n");
 
-	return ret;
+	return spi_write(st->spi, &st->tx_buf, 8);
 }
 
 static int ltc6802_wakeup(struct iio_dev *indio_dev)
@@ -389,11 +382,9 @@ static int ltc6802_wakeup(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	if ((st->st->cfg[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0) {
+	if ((st->cfg[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0) {
 		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
-		ret = ltc6802_write_cfg(indio_dev);
-		if (ret)
-			return ret;
+		return ltc6802_write_cfg(indio_dev);
 	}
 
 	return ret;
@@ -412,11 +403,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 * it needs to be waken up before requesting a conversion.
 	 */
 	ret = ltc6802_wakeup(indio_dev);
-	if (ret) {
-		dev_err(&indio_dev->dev,
-			"Failed to request device wakeup\n");
+	if (ret)
 		return ret;
-	}
 
 	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
 	switch (chan->type) {
@@ -433,11 +421,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	}
 
 	ret = spi_write(st->spi, st->tx_buf, 2);
-	if (ret) {
-		dev_err(&indio_dev->dev,
-			"Failed to request channel conversion\n");
+	if (ret)
 		return ret;
-	}
 
 	/*
 	 * Datasheet specifies a conversion time between 1 ms to 1.5 ms
@@ -531,8 +516,6 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 	ret = ltc6802_wakeup(indio_dev);
 	if (ret) {
 		mutex_unlock(&indio_dev->mlock);
-		dev_err(&indio_dev->dev,
-			"Failed to request device wakeup\n");
 		return ret;
 	}
 
