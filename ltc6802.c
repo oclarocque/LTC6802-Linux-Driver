@@ -569,7 +569,6 @@ ATTRIBUTE_GROUPS(dev);
 static int ltc6802_probe(struct spi_device *spi)
 {
 	int ret;
-	const void *ltc6802_addr;
 	struct iio_dev *indio_dev;
 	struct ltc6802_state *st;
 
@@ -587,14 +586,13 @@ static int ltc6802_probe(struct spi_device *spi)
 	st->spi = spi;
 	st->info = &ltc6802_chip_info_tbl[spi_get_device_id(spi)->driver_data];
 
-	ltc6802_addr = of_get_property(st->spi->dev.of_node,
-				       "ltc6802,address", NULL);
-	if (!ltc6802_addr) {
+	ret = of_property_read_u32(spi->dev.of_node,
+				   "device-address", &st->address);
+	if (ret) {
 		dev_err(&indio_dev->dev,
 			"Failed to get serial interface address\n");
 		return -EINVAL;
 	}
-	st->address = be32_to_cpup(ltc6802_addr);
 
 	indio_dev->name = spi_get_device_id(spi)->name;
 	indio_dev->dev.parent = &spi->dev;
