@@ -1,0 +1,19 @@
+* Linear Technology LTC6802/LTC6803 Multicell Battery Stack Monitor
+
+Required properties:
+  - compatible: Should be "ltc,ltc6802" or "ltc,ltc6803"
+  - reg: Chip select number for the device
+  - spi-cpol: Device requires inverse clock polarity mode
+  - spi-cpha: Device requires shifted clock phase mode
+  - spi-max-frequency: Maximum clocking speed of device in Hz
+  - device-address: Address of serial interface set with pins A3..A1
+
+Example:
+adc@0 {
+	compatible = "ltc,ltc6802";
+	reg = <0>;
+	spi-cpol;
+	spi-cpha;
+	spi-max-frequency = <1000000>;
+	device-address = <3>;
+};
