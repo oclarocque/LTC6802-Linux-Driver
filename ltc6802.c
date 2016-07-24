@@ -78,7 +78,7 @@
 #define LTC6802_CDC_MASK		0x07
 #define LTC6802_CHAN(n)   		(n + 1)
 
-#define LTC6802_ATTR_NAME_TO_ID(name) 	(((int)name[4] - 0x30) * 10 	\
+#define LTC6802_ATTR_NAME_TO_NUM(name) 	(((int)name[4] - 0x30) * 10 	\
 					+ (int)name[5] - 0x30)
 
 #define LTC6802_DEVICE_ATTR(name)	DEVICE_ATTR(name,		\
@@ -100,11 +100,6 @@ enum ltc6802_cfg_register {
 	LTC6802_CFG_REG3,
 	LTC6802_CFG_REG4,
 	LTC6802_CFG_REG5,
-};
-
-enum ltc6802_status {
-	LTC6802_STATUS_ADC,
-	LTC6802_STATUS_INT
 };
 
 enum ltc6802_id {
@@ -292,7 +287,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 	return 0;
 }
 
-static int ltc6802_get_discharge_value(int cell, u8 *buf)
+static int ltc6802_get_cell_disch_value(int cell, u8 *buf)
 {
 	int bit;
 	int reg;
@@ -308,7 +303,7 @@ static int ltc6802_get_discharge_value(int cell, u8 *buf)
 	return buf[reg] & (1 << bit);
 }
 
-static void ltc6802_set_discharge_value(bool set, int cell, u8 *buf)
+static void ltc6802_set_cell_disch_value(bool set, int cell, u8 *buf)
 {
 	int bit;
 	int reg;
@@ -456,9 +451,6 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 		mutex_unlock(&indio_dev->mlock);
 		return ret;
 	case IIO_CHAN_INFO_SCALE:
-		if (chan->type != IIO_TEMP && chan->type != IIO_VOLTAGE)
-			return -EINVAL;
-
 		*val = LTC6802_INPUT_DELTA_MV;
 		*val2 = LTC6802_ADC_RESOLUTION_BIT;
 		return IIO_VAL_FRACTIONAL_LOG2;
@@ -476,9 +468,8 @@ static ssize_t ltc6802_pin_show(struct device *dev,
                                 struct device_attribute *attr, char *buf)
 {
 	int ret;
-	int id;
+	int num;
 	int val;
-	const char *name = attr->attr.name;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
@@ -489,11 +480,11 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 		return ret;
 	}
 
-	id = LTC6802_ATTR_NAME_TO_ID(name);
-	if (strstr(name, "gpio"))
-		val = ltc6802_get_gpio_value(id, st->cfg);
+	num = LTC6802_ATTR_NAME_TO_NUM(attr->attr.name);
+	if (strstr(attr->attr.name, "gpio"))
+		val = ltc6802_get_gpio_value(num, st->cfg);
 	else
-		val = ltc6802_get_discharge_value(id, st->cfg);
+		val = ltc6802_get_cell_disch_value(num, st->cfg);
 	mutex_unlock(&indio_dev->mlock);
 
 	return sprintf(buf, "%d\n", val);
@@ -504,9 +495,8 @@ static ssize_t ltc6802_pin_store(struct device *dev,
                                  size_t count)
 {
 	int ret;
-	int id;
+	int num;
 	int val;
-	const char *name = attr->attr.name;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
@@ -519,11 +509,11 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 		return ret;
 	}
 
-	id = LTC6802_ATTR_NAME_TO_ID(name);
-	if (strstr(name, "gpio"))
-		ltc6802_set_gpio_value(val, id, st->cfg);
+	num = LTC6802_ATTR_NAME_TO_NUM(attr->attr.name);
+	if (strstr(attr->attr.name, "gpio"))
+		ltc6802_set_gpio_value(val, num, st->cfg);
 	else
-		ltc6802_set_discharge_value(val, id, st->cfg);
+		ltc6802_set_cell_disch_value(val, num, st->cfg);
 
 	ltc6802_write_cfg(indio_dev);
 	mutex_unlock(&indio_dev->mlock);
