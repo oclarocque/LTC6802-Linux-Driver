@@ -135,6 +135,7 @@ static const struct ltc6802_chip_info ltc6802_chip_info_tbl[] = {
 struct ltc6802_state {
 	const struct ltc6802_chip_info	*info;
 	struct spi_device		*spi;
+	struct mutex                    lock;
 	unsigned int			address;
 	u8				cfg[6];
 	/* Max Rx size is 8 bytes (when using WRCFG_CMD) */
@@ -385,12 +386,13 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 			    int *val, int *val2, long mask)
 {
 	int ret;
+	struct ltc6802_state *st = iio_priv(indio_dev);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&indio_dev->mlock);
+		mutex_lock(&st->lock);
 		ret = ltc6802_read_single_value(indio_dev, chan, val);
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret;
 	case IIO_CHAN_INFO_SCALE:
 		*val = LTC6802_INPUT_DELTA_MV;
@@ -415,10 +417,10 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	ret = ltc6802_read_reg_group(indio_dev, LTC6802_REG_CFG);
 	if (ret) {
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret;
 	}
 
@@ -427,7 +429,7 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 		val = ltc6802_get_gpio_value(num, st->cfg);
 	else
 		val = ltc6802_get_cell_disch_value(num, st->cfg);
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return sprintf(buf, "%d\n", val);
 }
@@ -444,10 +446,10 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 
 	sscanf(buf, "%d\n", &val);
 
-	mutex_lock(&indio_dev->mlock);
+	mutex_lock(&st->lock);
 	ret = ltc6802_wakeup(indio_dev);
 	if (ret) {
-		mutex_unlock(&indio_dev->mlock);
+		mutex_unlock(&st->lock);
 		return ret;
 	}
 
@@ -458,7 +460,7 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 		ltc6802_set_cell_disch_value(val, num, st->cfg);
 
 	ltc6802_write_cfg(indio_dev);
-	mutex_unlock(&indio_dev->mlock);
+	mutex_unlock(&st->lock);
 
 	return count;
 }
@@ -526,8 +528,11 @@ static int ltc6802_probe(struct spi_device *spi)
 		return -EINVAL;
 	}
 
+	mutex_init(&st->lock);
+
 	indio_dev->name = spi_get_device_id(spi)->name;
 	indio_dev->dev.parent = &spi->dev;
+	indio_dev->dev.of_node = spi->dev.of_node;
 	indio_dev->info = &ltc6802_info;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = st->info->channels;
