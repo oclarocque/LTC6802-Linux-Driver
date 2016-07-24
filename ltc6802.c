@@ -3,80 +3,26 @@
 #include <linux/delay.h>
 #include <linux/iio/iio.h>
 
-/* LTC6802 Commands */
 /* Write Configuration Register Group */
-#define LTC6802_CMD_WRCFG		0x01
+#define LTC6802_CMD_WRCFG	0x01
 /* Read Configuration Register Group */
-#define LTC6802_CMD_RDCFG		0x02
+#define LTC6802_CMD_RDCFG	0x02
 /* Read Cell Voltage Register Group */
-#define LTC6802_CMD_RDCV		0x04
-/* Read Flag Register Group */
-#define LTC6802_CMD_RDFLG		0x06
+#define LTC6802_CMD_RDCV	0x04
 /* Read Temperature Register Group */
-#define LTC6802_CMD_RDTMP		0x08
+#define LTC6802_CMD_RDTMP	0x08
 /* Start Cell Voltage A/D Conversions and Poll Status */
-#define LTC6802_CMD_STCVAD		0x10
-/* Start Open-Wire A/D Conversions and Poll Status */
-#define LTC6802_CMD_STOWAD		0x20
+#define LTC6802_CMD_STCVAD	0x10
 /* Start Temperature A/D Conversions and Poll Status */
-#define LTC6802_CMD_STTMPAD		0x30
-/* Poll A/D Converter Status */
-#define LTC6802_CMD_PLADC		0x40
-/* Poll Interrupt Status */
-#define LTC6802_CMD_PLINT		0x50
-/* Start Cell Voltage A/D Conversions and Poll Status, w/ Discharge Permitted */
-#define LTC6802_CMD_STCVDC		0x60
-/* Start Open-Wire A/D Conversions and Poll Status, w/ Discharge Permitted */
-#define LTC6802_CMD_STOWDC		0x70
+#define LTC6802_CMD_STTMPAD	0x30
 
-/* LTC6802 Configuration Register Groups */
-/* Register 0 */
-#define LTC6802_CFGR0_WDT		BIT(7)
-#define LTC6802_CFGR0_GPIO2		BIT(6)
-#define LTC6802_CFGR0_GPIO1		BIT(5)
-#define LTC6802_CFGR0_LVPL		BIT(4)
-#define LTC6802_CFGR0_CELL10		BIT(3)
-#define LTC6802_CFGR0_CDC_MODE7		7
-#define LTC6802_CFGR0_CDC_MODE6		6
-#define LTC6802_CFGR0_CDC_MODE5		5
-#define LTC6802_CFGR0_CDC_MODE4		4
-#define LTC6802_CFGR0_CDC_MODE3		3
-#define LTC6802_CFGR0_CDC_MODE2		2
-#define LTC6802_CFGR0_CDC_MODE1		1
-#define LTC6802_CFGR0_CDC_MODE0		0
-/* Register 1 */
-#define LTC6802_CFGR1_DCC7		BIT(7)
-#define LTC6802_CFGR1_DCC6		BIT(6)
-#define LTC6802_CFGR1_DCC5		BIT(5)
-#define LTC6802_CFGR1_DCC4		BIT(4)
-#define LTC6802_CFGR1_DCC3		BIT(3)
-#define LTC6802_CFGR1_DCC2		BIT(2)
-#define LTC6802_CFGR1_DCC1		BIT(1)
-#define LTC6802_CFGR1_DCC0		BIT(0)
-/* Register 2 */
-#define LTC6802_CFGR2_MC4I		BIT(7)
-#define LTC6802_CFGR2_MC3I		BIT(6)
-#define LTC6802_CFGR2_MC2I		BIT(5)
-#define LTC6802_CFGR2_MC1I		BIT(4)
-#define LTC6802_CFGR2_DCC12		BIT(3)
-#define LTC6802_CFGR2_DCC11		BIT(2)
-#define LTC6802_CFGR2_DCC10		BIT(1)
-#define LTC6802_CFGR2_DCC9		BIT(0)
-/* Register 3 */
-#define LTC6802_CFGR3_MC12I		BIT(7)
-#define LTC6802_CFGR3_MC11I		BIT(6)
-#define LTC6802_CFGR3_MC10I		BIT(5)
-#define LTC6802_CFGR3_MC9I		BIT(4)
-#define LTC6802_CFGR3_MC8I		BIT(3)
-#define LTC6802_CFGR3_MC7I		BIT(2)
-#define LTC6802_CFGR3_MC6I		BIT(1)
-#define LTC6802_CFGR3_MC5I		BIT(0)
-
-#define LTC6802_INPUT_DELTA_MV		6144
-#define LTC6802_ADC_RESOLUTION_BIT	12
-#define LTC6802_ADDR_CMD_SOF		(1000 << 4)
-#define LTC6802_CDC_MASK		0x07
-#define LTC6802_CHAN(n)   		(n + 1)
+#define LTC6802_ADC_RES_BIT	12
+#define LTC6802_ADDR_CMD_SOF	(1000 << 4)
+#define LTC6802_CDC_MODE0	0 /* When standby */
+#define LTC6802_CDC_MODE1	1 /* When active */
+#define LTC6802_CDC_MASK	0x07
+#define LTC6802_CHAN(n)   	(n + 1)
+#define LTC6802_INPUT_DELTA_MV	6144
 
 #define LTC6802_ATTR_NAME_TO_NUM(name) 	(((int)name[4] - 0x30) * 10 	\
 					+ (int)name[5] - 0x30)
@@ -250,10 +196,6 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 		st->tx_buf[1] = LTC6802_CMD_RDCV;
 		rx_size = 19;
 		break;
-	case LTC6802_REG_FLG:
-		st->tx_buf[1] = LTC6802_CMD_RDFLG;
-		rx_size = 4;
-		break;
 	case LTC6802_REG_TMP:
 		st->tx_buf[1] = LTC6802_CMD_RDTMP;
 		rx_size = 6;
@@ -377,8 +319,8 @@ static int ltc6802_wakeup(struct iio_dev *indio_dev)
 	if (ret)
 		return ret;
 
-	if ((st->cfg[0] & LTC6802_CDC_MASK) == LTC6802_CFGR0_CDC_MODE0) {
-		st->cfg[0] |= LTC6802_CFGR0_CDC_MODE1;
+	if ((st->cfg[0] & LTC6802_CDC_MASK) == LTC6802_CDC_MODE0) {
+		st->cfg[0] |= LTC6802_CDC_MODE1;
 		return ltc6802_write_cfg(indio_dev);
 	}
 
@@ -452,7 +394,7 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 		return ret;
 	case IIO_CHAN_INFO_SCALE:
 		*val = LTC6802_INPUT_DELTA_MV;
-		*val2 = LTC6802_ADC_RESOLUTION_BIT;
+		*val2 = LTC6802_ADC_RES_BIT;
 		return IIO_VAL_FRACTIONAL_LOG2;
 	default:
 		return -EINVAL;
