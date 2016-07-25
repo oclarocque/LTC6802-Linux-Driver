@@ -1,7 +1,7 @@
 * Linear Technology LTC6802/LTC6803 Multicell Battery Stack Monitor
 
 Required properties:
-  - compatible: Should be "ltc,ltc6802" or "ltc,ltc6803"
+  - compatible: Should be "lltc,ltc6802" or "lltc,ltc6803"
   - reg: Chip select number for the device
   - spi-cpol: Device requires inverse clock polarity mode
   - spi-cpha: Device requires shifted clock phase mode
@@ -10,7 +10,7 @@ Required properties:
 
 Example:
 adc@0 {
-	compatible = "ltc,ltc6802";
+	compatible = "lltc,ltc6802";
 	reg = <0>;
 	spi-cpol;
 	spi-cpha;

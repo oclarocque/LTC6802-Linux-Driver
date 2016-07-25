@@ -33,7 +33,7 @@
 	pinctrl-0 = <&spi0_pins>; 
 
 	adc@0 {
-		compatible = "ltc,ltc6802";
+		compatible = "lltc,ltc6802";
 		reg = <0>;
 		spi-cpol;
 		spi-cpha;
