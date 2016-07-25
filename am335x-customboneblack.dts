@@ -1,0 +1,43 @@
+/*
+ * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+/dts-v1/;
+
+#include "am33xx.dtsi"
+#include "am335x-bone-common.dtsi"
+
+/ {
+	model = "TI AM335x BeagleBone Black";
+	compatible = "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
+};
+
+&am33xx_pinmux {
+	spi0_pins: pinmux_spi0_pins {
+		pinctrl-single,pins = <
+			AM33XX_IOPAD(0x950, PIN_INPUT_PULLUP | MUX_MODE0) /* spi0_sclk.spi0_sclk, INPUT_PULLUP | MODE0 */
+			AM33XX_IOPAD(0x954, PIN_INPUT_PULLUP | MUX_MODE0) /* spi0_d0.spi0_d0, INPUT_PULLUP | MODE0 */
+			AM33XX_IOPAD(0x958, PIN_OUTPUT_PULLUP | MUX_MODE0) /* spi0_d1.spi0_d1, OUTPUT_PULLUP | MODE0 */
+			AM33XX_IOPAD(0x95c, PIN_OUTPUT_PULLUP | MUX_MODE0) /* spi0_cs0.spi0_cs0, OUTPUT_PULLUP | MODE0 */
+		>;
+	};
+};
+
+&spi0 {
+	status = "okay";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins>; 
+
+	adc@0 {
+		compatible = "ltc,ltc6802";
+		reg = <0>;
+		spi-cpol;
+		spi-cpha;
+		spi-max-frequency = <1000000>;
+		device-address = <3>;
+	};
+};
