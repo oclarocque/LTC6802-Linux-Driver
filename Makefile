@@ -1,12 +1,7 @@
-# If KERNELRELEASE is defined, we've been invoked from the
-# kernel build system and can use its language.
 ifneq ($(KERNELRELEASE),)
-	obj-m := ltc6802.o
-# Otherwise we were called directly from the command
-# line; invoke the kernel build system.
+obj-m := ltc6802.o
 else
-	KERNELDIR ?= /lib/modules/$(shell uname -r)/build
-	PWD := $(shell pwd)
-default:
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
+KDIR := $(HOME)/linux-kernel-labs/src/linux
+all:
+	$(MAKE) -C $(KDIR) M=$$PWD
 endif
