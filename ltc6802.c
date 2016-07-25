@@ -3,6 +3,8 @@
 #include <linux/delay.h>
 #include <linux/iio/iio.h>
 
+#include <linux/platform_data/ltc6802.h>
+
 /* Write Configuration Register Group */
 #define LTC6802_CMD_WRCFG	0x01
 /* Read Configuration Register Group */
@@ -243,7 +245,7 @@ static int ltc6802_get_cell_disch_value(int cell, u8 *buf)
 		reg = LTC6802_CFG_REG2;
 	}
 
-	return buf[reg] & (1 << bit);
+	return !!(buf[reg] & (1 << bit));
 }
 
 static void ltc6802_set_cell_disch_value(bool set, int cell, u8 *buf)
@@ -505,6 +507,7 @@ static int ltc6802_probe(struct spi_device *spi)
 	int ret;
 	struct iio_dev *indio_dev;
 	struct ltc6802_state *st;
+	struct ltc6802_platform_data *pdata;
 
 	dev_info(&spi->dev, "Probing..\n");
 
@@ -523,8 +526,18 @@ static int ltc6802_probe(struct spi_device *spi)
 	ret = of_property_read_u32(spi->dev.of_node,
 				   "device-address", &st->address);
 	if (ret) {
+		pdata = dev_get_platdata(&spi->dev);
+		if (pdata) {
+			st->address = pdata->device_address;
+		} else {
+			dev_err(&indio_dev->dev,
+				"Failed to get serial interface address\n");
+			return -EINVAL;
+		}
+	}
+	if (st->address > 15) {
 		dev_err(&indio_dev->dev,
-			"Failed to get serial interface address\n");
+			"Invalid serial interface address\n");
 		return -EINVAL;
 	}
 
