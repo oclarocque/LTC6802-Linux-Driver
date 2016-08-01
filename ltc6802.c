@@ -22,7 +22,7 @@
 #define LTC6802_ADDR_CMD_SOF	(1000 << 4)
 #define LTC6802_CDC_MODE0	0 /* When standby */
 #define LTC6802_CDC_MODE1	1 /* When active */
-#define LTC6802_CDC_MASK	0x07
+#define LTC6802_CDC_MASK	GENMASK(2, 0)
 #define LTC6802_CHAN(n)   	(n + 1)
 #define LTC6802_INPUT_DELTA_MV	6144
 
