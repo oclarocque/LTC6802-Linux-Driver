@@ -1,3 +1,14 @@
+ /*
+  * iio/adc/ltc6802.c
+  * Copyright (C) 2016 Olivier C. Larocque
+  *
+  * Driver for LTC6802-2, LTC6803-2 and LTC6803-4.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 as
+  * published by the Free Software Foundation.
+  */
+
 #include <linux/module.h>
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
