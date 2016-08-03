@@ -6,23 +6,23 @@
 
 #include <linux/platform_data/ltc6802.h>
 
-/* Write Configuration Register Group */
+/* Write configuration register group */
 #define LTC6802_CMD_WRCFG	0x01
-/* Read Configuration Register Group */
+/* Read configuration register group */
 #define LTC6802_CMD_RDCFG	0x02
-/* Read Cell Voltage Register Group */
+/* Read cell voltage register group */
 #define LTC6802_CMD_RDCV	0x04
-/* Read Temperature Register Group */
+/* Read temperature register group */
 #define LTC6802_CMD_RDTMP	0x08
-/* Start Cell Voltage A/D Conversions and Poll Status */
+/* Start cell voltage A/D conversions and poll status */
 #define LTC6802_CMD_STCVAD	0x10
-/* Start Temperature A/D Conversions and Poll Status */
+/* Start temperature A/D conversions and poll status */
 #define LTC6802_CMD_STTMPAD	0x30
 
 #define LTC6802_ADC_RES_BIT	12
 #define LTC6802_ADDR_CMD_SOF	(1000 << 4)
-#define LTC6802_CDC_MODE0	0 /* When standby */
-#define LTC6802_CDC_MODE1	1 /* When active */
+#define LTC6802_CDC_MODE0	0 /* Standby mode */
+#define LTC6802_CDC_MODE1	1 /* Active mode */
 #define LTC6802_CDC_MASK	GENMASK(2, 0)
 #define LTC6802_CHAN(n)   	(n + 1)
 #define LTC6802_INPUT_DELTA_MV	6144
@@ -142,9 +142,9 @@ struct ltc6802_state {
 	struct mutex                    lock;
 	unsigned int			address;
 	u8				cfg[6];
-	/* Max Rx size is 8 bytes (when using WRCFG_CMD) */
+	/* Max rx size is 8 bytes (when using WRCFG_CMD) */
 	u8 				tx_buf[8]  ____cacheline_aligned;
-	/* Max Tx size is 19 bytes (when using RDCV_CMD) */
+	/* Max tx size is 19 bytes (when using RDCV_CMD) */
 	u8 				rx_buf[19] ____cacheline_aligned;
 };
 
@@ -339,11 +339,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	int reg;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	/*
-	 * Device falls into standby mode if no activity is detected on the SCKI
-	 * pin for 2.5 seconds. When in standby mode, the ADC is turned off so
-	 * it needs to be waken up before requesting a conversion.
-	 */
+
 	ret = ltc6802_wakeup(indio_dev);
 	if (ret)
 		return ret;
@@ -517,8 +513,6 @@ static int ltc6802_probe(struct spi_device *spi)
 	struct ltc6802_state *st;
 	struct ltc6802_platform_data *pdata;
 
-	dev_info(&spi->dev, "Probing..\n");
-
 	indio_dev = devm_iio_device_alloc(&spi->dev, sizeof(*st));
 	if (!indio_dev) {
 		dev_err(&spi->dev, "Failed to allocate IIO device\n");
@@ -571,8 +565,6 @@ static int ltc6802_probe(struct spi_device *spi)
 static int ltc6802_remove(struct spi_device *spi)
 {
 	struct iio_dev *indio_dev = spi_get_drvdata(spi);
-
-	dev_info(&spi->dev, "Removing..\n");
 
 	iio_device_unregister(indio_dev);
 
