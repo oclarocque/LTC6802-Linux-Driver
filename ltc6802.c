@@ -37,6 +37,7 @@
 #define LTC6802_CDC_MASK	GENMASK(2, 0)
 #define LTC6802_CHAN(n)   	(n + 1)
 #define LTC6802_INPUT_DELTA_MV	6144
+#define LTC6802_MAX_DEV_ADDR	0xF
 
 #define LTC6802_ATTR_NAME_TO_NUM(name) 	(((int)name[4] - 0x30) * 10 	   \
 					+ (int)name[5] - 0x30)
@@ -548,7 +549,7 @@ static int ltc6802_probe(struct spi_device *spi)
 			return -EINVAL;
 		}
 	}
-	if (st->address > 15) {
+	if (st->address > LTC6802_MAX_DEV_ADDR) {
 		dev_err(&indio_dev->dev,
 			"Invalid serial interface address\n");
 		return -EINVAL;
