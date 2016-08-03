@@ -13,7 +13,7 @@ do
 	else
 		echo "FAIL"
 	fi
-	sleep 0.1
+	#sleep 0.1
 done
 
 for i in $(seq -w 1 12);
@@ -26,7 +26,7 @@ do
 	else
 		echo "FAIL"
 	fi
-	sleep 0.1
+	#sleep 0.1
 done
 
 for i in $(seq 1 12);
@@ -37,7 +37,8 @@ do
 		j=$(($i - 1))
 		adc=$(cat in_voltage${i}-voltage${j}_raw)
 	fi
-	v=$(echo "scale=0; $adc * $scale /1" | bc)
-	echo "Cell #${i}:\t$v mV"
-	sleep 0.1
+	#v=$(echo "scale=0; $adc * $scale /1" | bc)
+	#echo "Cell #${i}:\t$v mV"
+	echo -e "Cell #${i}:\t$adc"
+	#sleep 0.1
 done
