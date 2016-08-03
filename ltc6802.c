@@ -1,6 +1,7 @@
  /*
   * iio/adc/ltc6802.c
-  * Copyright (C) 2016 Olivier C. Larocque
+  *
+  * Copyright (C) 2016 Olivier C. Larocque <olivier.c.larocque@gmail.com>
   *
   * Driver for LTC6802-2, LTC6803-2 and LTC6803-4.
   *
