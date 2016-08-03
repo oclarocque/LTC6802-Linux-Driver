@@ -2,6 +2,7 @@
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
 #include <linux/iio/iio.h>
+#include <linux/iio/sysfs.h>
 
 #include <linux/platform_data/ltc6802.h>
 
@@ -32,7 +33,7 @@
 #define LTC6802_IIO_DEVICE_ATTR(name)	IIO_DEVICE_ATTR(name,		   \
 							S_IWUSR | S_IRUGO, \
 							ltc6802_pin_show,  \
-							ltc6802_pin_store  \
+							ltc6802_pin_store, \
 							0);
 
 enum ltc6802_register_group {
@@ -482,20 +483,20 @@ static LTC6802_IIO_DEVICE_ATTR(cell12_disch);
 
 
 static struct attribute *ltc6802_attributes[] = {
-	&iio_dev_attr_gpio01_pinctrl.attr,
-	&iio_dev_attr_gpio02_pinctrl.attr,
-	&iio_dev_attr_cell01_disch.attr,
-	&iio_dev_attr_cell02_disch.attr,
-	&iio_dev_attr_cell03_disch.attr,
-	&iio_dev_attr_cell04_disch.attr,
-	&iio_dev_attr_cell05_disch.attr,
-	&iio_dev_attr_cell06_disch.attr,
-	&iio_dev_attr_cell07_disch.attr,
-	&iio_dev_attr_cell08_disch.attr,
-	&iio_dev_attr_cell09_disch.attr,
-	&iio_dev_attr_cell10_disch.attr,
-	&iio_dev_attr_cell11_disch.attr,
-	&iio_dev_attr_cell12_disch.attr,
+	&iio_dev_attr_gpio01_pinctrl.dev_attr.attr,
+	&iio_dev_attr_gpio02_pinctrl.dev_attr.attr,
+	&iio_dev_attr_cell01_disch.dev_attr.attr,
+	&iio_dev_attr_cell02_disch.dev_attr.attr,
+	&iio_dev_attr_cell03_disch.dev_attr.attr,
+	&iio_dev_attr_cell04_disch.dev_attr.attr,
+	&iio_dev_attr_cell05_disch.dev_attr.attr,
+	&iio_dev_attr_cell06_disch.dev_attr.attr,
+	&iio_dev_attr_cell07_disch.dev_attr.attr,
+	&iio_dev_attr_cell08_disch.dev_attr.attr,
+	&iio_dev_attr_cell09_disch.dev_attr.attr,
+	&iio_dev_attr_cell10_disch.dev_attr.attr,
+	&iio_dev_attr_cell11_disch.dev_attr.attr,
+	&iio_dev_attr_cell12_disch.dev_attr.attr,
 	NULL,
 };
 
