@@ -26,13 +26,14 @@
 #define LTC6802_CHAN(n)   	(n + 1)
 #define LTC6802_INPUT_DELTA_MV	6144
 
-#define LTC6802_ATTR_NAME_TO_NUM(name) 	(((int)name[4] - 0x30) * 10 	\
+#define LTC6802_ATTR_NAME_TO_NUM(name) 	(((int)name[4] - 0x30) * 10 	   \
 					+ (int)name[5] - 0x30)
 
-#define LTC6802_DEVICE_ATTR(name)	DEVICE_ATTR(name,		\
-						    S_IWUSR | S_IRUGO,	\
-						    ltc6802_pin_show,	\
-						    ltc6802_pin_store);
+#define LTC6802_IIO_DEVICE_ATTR(name)	IIO_DEVICE_ATTR(name,		   \
+							S_IWUSR | S_IRUGO, \
+							ltc6802_pin_show,  \
+							ltc6802_pin_store  \
+							0);
 
 enum ltc6802_register_group {
 	LTC6802_REG_CFG,
@@ -405,10 +406,6 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 	}
 }
 
-static const struct iio_info ltc6802_info = {
-	.driver_module = THIS_MODULE,
-	.read_raw = &ltc6802_read_raw,
-};
 
 static ssize_t ltc6802_pin_show(struct device *dev,
                                 struct device_attribute *attr, char *buf)
@@ -467,40 +464,50 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 	return count;
 }
 
-static LTC6802_DEVICE_ATTR(cell01_disch);
-static LTC6802_DEVICE_ATTR(cell02_disch);
-static LTC6802_DEVICE_ATTR(cell03_disch);
-static LTC6802_DEVICE_ATTR(cell04_disch);
-static LTC6802_DEVICE_ATTR(cell05_disch);
-static LTC6802_DEVICE_ATTR(cell06_disch);
-static LTC6802_DEVICE_ATTR(cell07_disch);
-static LTC6802_DEVICE_ATTR(cell08_disch);
-static LTC6802_DEVICE_ATTR(cell09_disch);
-static LTC6802_DEVICE_ATTR(cell10_disch);
-static LTC6802_DEVICE_ATTR(cell11_disch);
-static LTC6802_DEVICE_ATTR(cell12_disch);
+static LTC6802_IIO_DEVICE_ATTR(gpio01_pinctrl);
+static LTC6802_IIO_DEVICE_ATTR(gpio02_pinctrl);
 
-static LTC6802_DEVICE_ATTR(gpio01_pinctrl);
-static LTC6802_DEVICE_ATTR(gpio02_pinctrl);
+static LTC6802_IIO_DEVICE_ATTR(cell01_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell02_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell03_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell04_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell05_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell06_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell07_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell08_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell09_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell10_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell11_disch);
+static LTC6802_IIO_DEVICE_ATTR(cell12_disch);
 
-static struct attribute *dev_attrs[] = {
-	&dev_attr_cell01_disch.attr,
-	&dev_attr_cell02_disch.attr,
-	&dev_attr_cell03_disch.attr,
-	&dev_attr_cell04_disch.attr,
-	&dev_attr_cell05_disch.attr,
-	&dev_attr_cell06_disch.attr,
-	&dev_attr_cell07_disch.attr,
-	&dev_attr_cell08_disch.attr,
-	&dev_attr_cell09_disch.attr,
-	&dev_attr_cell10_disch.attr,
-	&dev_attr_cell11_disch.attr,
-	&dev_attr_cell12_disch.attr,
-	&dev_attr_gpio01_pinctrl.attr,
-	&dev_attr_gpio02_pinctrl.attr,
+
+static struct attribute *ltc6802_attributes[] = {
+	&iio_dev_attr_gpio01_pinctrl.attr,
+	&iio_dev_attr_gpio02_pinctrl.attr,
+	&iio_dev_attr_cell01_disch.attr,
+	&iio_dev_attr_cell02_disch.attr,
+	&iio_dev_attr_cell03_disch.attr,
+	&iio_dev_attr_cell04_disch.attr,
+	&iio_dev_attr_cell05_disch.attr,
+	&iio_dev_attr_cell06_disch.attr,
+	&iio_dev_attr_cell07_disch.attr,
+	&iio_dev_attr_cell08_disch.attr,
+	&iio_dev_attr_cell09_disch.attr,
+	&iio_dev_attr_cell10_disch.attr,
+	&iio_dev_attr_cell11_disch.attr,
+	&iio_dev_attr_cell12_disch.attr,
 	NULL,
 };
-ATTRIBUTE_GROUPS(dev);
+
+static struct attribute_group ltc6802_attribute_group = {
+	.attrs = ltc6802_attributes,
+};
+
+static const struct iio_info ltc6802_info = {
+	.driver_module = THIS_MODULE,
+	.attrs = &ltc6802_attribute_group,
+	.read_raw = &ltc6802_read_raw,
+};
 
 static int ltc6802_probe(struct spi_device *spi)
 {
@@ -550,8 +557,6 @@ static int ltc6802_probe(struct spi_device *spi)
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = st->info->channels;
 	indio_dev->num_channels = st->info->num_channels;
-	/* Index 0 is already used by chan_attr_group so use next one */
-	indio_dev->groups[1] = dev_groups[0];
 
 	ret = iio_device_register(indio_dev);
 	if (ret) {
