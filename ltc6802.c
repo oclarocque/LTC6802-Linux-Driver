@@ -36,18 +36,18 @@
 #define LTC6802_CDC_MODE0	0 /* Standby mode */
 #define LTC6802_CDC_MODE1	1 /* Active mode */
 #define LTC6802_CDC_MASK	GENMASK(2, 0)
-#define LTC6802_CHAN(n)   	(n + 1)
+#define LTC6802_CHAN(n)		(n + 1)
 #define LTC6802_INPUT_DELTA_MV	6144
 #define LTC6802_MAX_DEV_ADDR	0xF
 
-#define LTC6802_ATTR_NAME_TO_NUM(name) 	(((int)name[4] - 0x30) * 10 	   \
+#define LTC6802_ATTR_NAME_TO_NUM(name)	(((int)name[4] - 0x30) * 10	   \
 					+ (int)name[5] - 0x30)
 
 #define LTC6802_IIO_DEVICE_ATTR(name)	IIO_DEVICE_ATTR(name,		   \
 							S_IWUSR | S_IRUGO, \
 							ltc6802_pin_show,  \
 							ltc6802_pin_store, \
-							0);
+							0)
 
 enum ltc6802_register_group {
 	LTC6802_REG_CFG,
@@ -79,8 +79,8 @@ MODULE_DEVICE_TABLE(spi, ltc6802_id);
 
 #ifdef CONFIG_OF
 static const struct of_device_id ltc6802_adc_dt_ids[] = {
-	{ .compatible = "ltc,ltc6802" },
-	{ .compatible = "ltc,ltc6803" },
+	{ .compatible = "lltc,ltc6802" },
+	{ .compatible = "lltc,ltc6803" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ltc6802_adc_dt_ids);
@@ -156,9 +156,9 @@ struct ltc6802_state {
 	unsigned int			address;
 	u8				cfg[6];
 	/* Max rx size is 8 bytes (when using WRCFG_CMD) */
-	u8 				tx_buf[8]  ____cacheline_aligned;
+	u8				tx_buf[8]  ____cacheline_aligned;
 	/* Max tx size is 19 bytes (when using RDCV_CMD) */
-	u8 				rx_buf[19] ____cacheline_aligned;
+	u8				rx_buf[19] ____cacheline_aligned;
 };
 
 static u8 ltc6802_crc8(u8 crc_in, u8 data)
@@ -205,7 +205,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 	};
 
 	st->tx_buf[0] = LTC6802_ADDR_CMD_SOF | st->address;
-	switch(reg) {
+	switch (reg) {
 	case LTC6802_REG_CFG:
 		st->tx_buf[1] = LTC6802_CMD_RDCFG;
 		rx_size = 7;
@@ -384,7 +384,7 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	 * in the meantime.
 	 */
 	mdelay(10);
-	
+
 	ret = ltc6802_read_reg_group(indio_dev, reg);
 	if (ret)
 		return ret;
@@ -418,7 +418,7 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 
 
 static ssize_t ltc6802_pin_show(struct device *dev,
-                                struct device_attribute *attr, char *buf)
+				struct device_attribute *attr, char *buf)
 {
 	int ret;
 	int num;
@@ -444,8 +444,8 @@ static ssize_t ltc6802_pin_show(struct device *dev,
 }
 
 static ssize_t ltc6802_pin_store(struct device *dev,
-                                 struct device_attribute *attr, const char *buf,
-                                 size_t count)
+				 struct device_attribute *attr, const char *buf,
+				 size_t count)
 {
 	int ret;
 	int num;
@@ -453,7 +453,9 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
-	sscanf(buf, "%d\n", &val);
+	ret = sscanf(buf, "%d\n", &val);
+	if (ret != 1)
+		return -EINVAL;
 
 	mutex_lock(&st->lock);
 	ret = ltc6802_wakeup(indio_dev);
