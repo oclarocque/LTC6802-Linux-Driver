@@ -339,7 +339,16 @@ static int ltc6802_wakeup(struct iio_dev *indio_dev)
 
 	if ((st->cfg[0] & LTC6802_CDC_MASK) == LTC6802_CDC_MODE0) {
 		st->cfg[0] |= LTC6802_CDC_MODE1;
-		return ltc6802_write_cfg(indio_dev);
+		ret = ltc6802_write_cfg(indio_dev);
+		if (ret)
+			return ret;
+		/*
+		 * Wait for the device to fully wake up. If not, if an A/D
+		 * conversion is immediately requested, it will take longer
+		 * than the delay specified in the datasheet and thus, a wrong
+		 * value will be fetched from ltc6802_read_single_value().
+		 */
+		mdelay(10);
 	}
 
 	return ret;
@@ -376,14 +385,10 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 		return ret;
 
 	/*
-	 * Datasheet specifies a conversion time between 1 ms to 1.5 ms
-	 * for a single channel. Tests have shown that the conversion of
-	 * a given channel takes approx. 8.5 ms. The datasheet timing is
-	 * respected only if the conversion of the same channel is requested
-	 * again without having requested the conversion of another channel
-	 * in the meantime.
+	 * Datasheet specifies a maximum conversion time of 1.5 ms. Double it
+	 * to make sure it is really done when reading the value.
 	 */
-	mdelay(10);
+	mdelay(3);
 
 	ret = ltc6802_read_reg_group(indio_dev, reg);
 	if (ret)
@@ -470,7 +475,9 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 	else
 		ltc6802_set_cell_disch_value(val, num, st->cfg);
 
-	ltc6802_write_cfg(indio_dev);
+	ret = ltc6802_write_cfg(indio_dev);
+	if(ret)
+		return ret;
 	mutex_unlock(&st->lock);
 
 	return count;
