@@ -163,8 +163,8 @@ struct ltc6802_state {
 
 static u8 ltc6802_crc8(u8 crc_in, u8 data)
 {
-	u8 crc_out = crc_in ^ data;
 	int i;
+	u8 crc_out = crc_in ^ data;
 
 	for (i = 0; i < 8; i++) {
 		if (crc_out & 0x80) {
@@ -180,8 +180,8 @@ static u8 ltc6802_crc8(u8 crc_in, u8 data)
 
 static u8 ltc6802_pec_calculation(u8 *buf, int size)
 {
-	u8 pec = 0;
 	int i;
+	u8 pec = 0;
 
 	for (i = 0; i < (size - 1); i++)
 		pec = ltc6802_crc8(pec, buf[i]);
@@ -191,8 +191,7 @@ static u8 ltc6802_pec_calculation(u8 *buf, int size)
 
 static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 {
-	int ret;
-	int rx_size;
+	int ret, rx_size;
 	u8 pec;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 	struct spi_transfer xfers[] = {
@@ -234,7 +233,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 		return -EINVAL;
 	}
 
-	/* Save cfg registers value */
+	/* Save a local copy of the config registers */
 	if (reg == LTC6802_REG_CFG) {
 		st->cfg[0] = st->rx_buf[0];
 		st->cfg[1] = st->rx_buf[1];
@@ -249,8 +248,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 
 static int ltc6802_get_cell_disch_value(int cell, u8 *buf)
 {
-	int bit;
-	int reg;
+	int bit, reg;
 
 	if (cell < 9) {
 		bit = (cell - 1);
@@ -265,8 +263,7 @@ static int ltc6802_get_cell_disch_value(int cell, u8 *buf)
 
 static void ltc6802_set_cell_disch_value(bool set, int cell, u8 *buf)
 {
-	int bit;
-	int reg;
+	int bit, reg;
 
 	if (cell < 9) {
 		bit = (cell - 1);
@@ -298,8 +295,7 @@ static void ltc6802_set_gpio_value(bool set, int gpio, u8 *buf)
 
 static int ltc6802_get_chan_value(int channel, u8 *buf)
 {
-	int idx;
-	int val;
+	int idx, val;
 
 	if (channel % 2) {
 		idx = (channel - 1) + ((channel - 1) / 2);
@@ -346,7 +342,7 @@ static int ltc6802_wakeup(struct iio_dev *indio_dev)
 		 * Wait for the device to fully wake up. If not, if an A/D
 		 * conversion is immediately requested, it will take longer
 		 * than the delay specified in the datasheet and thus, a wrong
-		 * value will be fetched from ltc6802_read_single_value().
+		 * value will be returned by ltc6802_read_single_value().
 		 */
 		mdelay(10);
 	}
@@ -357,8 +353,7 @@ static int ltc6802_wakeup(struct iio_dev *indio_dev)
 static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 				     struct iio_chan_spec const *chan, int *val)
 {
-	int ret;
-	int reg;
+	int ret, reg;
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
 
@@ -385,8 +380,8 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 		return ret;
 
 	/*
-	 * Datasheet specifies a maximum conversion time of 1.5 ms. Double it
-	 * to make sure it is really done when reading the value.
+	 * Datasheet specifies a maximum conversion time of 1.5 ms. Wait a
+	 * little more to make sure it is really done before reading the result.
 	 */
 	mdelay(3);
 
@@ -425,9 +420,7 @@ static int ltc6802_read_raw(struct iio_dev *indio_dev,
 static ssize_t ltc6802_pin_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	int ret;
-	int num;
-	int val;
+	int ret, num, val;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
@@ -452,9 +445,7 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 				 struct device_attribute *attr, const char *buf,
 				 size_t count)
 {
-	int ret;
-	int num;
-	int val;
+	int ret, num, val;
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct ltc6802_state *st = iio_priv(indio_dev);
 
@@ -476,7 +467,7 @@ static ssize_t ltc6802_pin_store(struct device *dev,
 		ltc6802_set_cell_disch_value(val, num, st->cfg);
 
 	ret = ltc6802_write_cfg(indio_dev);
-	if(ret)
+	if (ret)
 		return ret;
 	mutex_unlock(&st->lock);
 
