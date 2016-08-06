@@ -161,7 +161,7 @@ struct ltc6802_state {
 	u8				rx_buf[19] ____cacheline_aligned;
 };
 
-static u8 ltc6802_crc8(u8 crc_in, u8 data)
+static u8 ltc6802_calculate_crc8(u8 crc_in, u8 data)
 {
 	int i;
 	u8 crc_out = crc_in ^ data;
@@ -178,13 +178,13 @@ static u8 ltc6802_crc8(u8 crc_in, u8 data)
 	return crc_out;
 }
 
-static u8 ltc6802_pec_calculation(u8 *buf, int size)
+static u8 ltc6802_calculate_pec(u8 *buf, int size)
 {
 	int i;
 	u8 pec = 0;
 
 	for (i = 0; i < (size - 1); i++)
-		pec = ltc6802_crc8(pec, buf[i]);
+		pec = ltc6802_calculate_crc8(pec, buf[i]);
 
 	return pec;
 }
@@ -226,7 +226,7 @@ static int ltc6802_read_reg_group(struct iio_dev *indio_dev, int reg)
 	if (ret)
 		return ret;
 
-	pec = ltc6802_pec_calculation(st->rx_buf, rx_size);
+	pec = ltc6802_calculate_pec(st->rx_buf, rx_size);
 	if (pec != st->rx_buf[rx_size - 1]) {
 		dev_err(&indio_dev->dev,
 			"CRC error\n");
