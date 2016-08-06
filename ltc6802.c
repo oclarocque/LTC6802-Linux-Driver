@@ -339,7 +339,14 @@ static int ltc6802_wakeup(struct iio_dev *indio_dev)
 
 	if ((st->cfg[0] & LTC6802_CDC_MASK) == LTC6802_CDC_MODE0) {
 		st->cfg[0] |= LTC6802_CDC_MODE1;
-		return ltc6802_write_cfg(indio_dev);
+		ret = ltc6802_write_cfg(indio_dev);
+		/*
+		 * Wait for the device to fully wake up. If not, if an A/D
+		 * conversion is immediately requested, it will take longer
+		 * than the delay specified in the datasheet and thus, the
+		 * one in the ltc6802_read_single_value().
+		 */
+		mdelay(10);
 	}
 
 	return ret;
@@ -351,6 +358,42 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 	int ret;
 	int reg;
 	struct ltc6802_state *st = iio_priv(indio_dev);
+	struct spi_transfer t[] = {
+		{
+		       .tx_buf = st->tx_buf,
+		       .len = 2,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		},{
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		}, {
+		.delay_usecs = 2000,
+		},
+	};
 
 
 	ret = ltc6802_wakeup(indio_dev);
@@ -371,19 +414,13 @@ static int ltc6802_read_single_value(struct iio_dev *indio_dev,
 		return -EINVAL;
 	}
 
-	ret = spi_write(st->spi, st->tx_buf, 2);
+	//ret = spi_write(st->spi, st->tx_buf, 2);
+	ret = spi_sync_transfer(st->spi, t, ARRAY_SIZE(t));
 	if (ret)
 		return ret;
 
-	/*
-	 * Datasheet specifies a conversion time between 1 ms to 1.5 ms
-	 * for a single channel. Tests have shown that the conversion of
-	 * a given channel takes approx. 8.5 ms. The datasheet timing is
-	 * respected only if the conversion of the same channel is requested
-	 * again without having requested the conversion of another channel
-	 * in the meantime.
-	 */
-	mdelay(10);
+	/* Datasheet specifies a conversion time between 1 ms to 1.5 ms */
+	//mdelay(3);
 
 	ret = ltc6802_read_reg_group(indio_dev, reg);
 	if (ret)
